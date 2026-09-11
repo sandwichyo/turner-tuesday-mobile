@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Offline · Turner Tuesdays</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1d232a" />
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f2f2f2;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --accent: #4f46e5;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1d232a;
+          --card: #242b33;
+          --text: #e5e7eb;
+          --muted: #9ca3af;
+          --accent: #818cf8;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        background: var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+
+      .card {
+        max-width: 26rem;
+        width: 100%;
+        padding: 2rem;
+        border-radius: 1rem;
+        background: var(--card);
+        box-shadow: 0 10px 30px rgb(0 0 0 / 0.12);
+        text-align: center;
+      }
+
+      img {
+        width: 72px;
+        height: 72px;
+        border-radius: 0.75rem;
+      }
+
+      h1 {
+        margin: 1.25rem 0 0.5rem;
+        font-size: 1.5rem;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      button {
+        margin-top: 1.5rem;
+        padding: 0.65rem 1.5rem;
+        border: 0;
+        border-radius: 0.5rem;
+        background: var(--accent);
+        color: #fff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button:hover {
+        filter: brightness(1.1);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <img src="/web-app-manifest-192x192.png" alt="" />
+      <h1>Keine Verbindung</h1>
+      <p>
+        Turner Tuesdays ist gerade nicht erreichbar. Sobald du wieder online
+        bist, sind Rankings und Ergebnisse sofort da.
+      </p>
+      <button type="button" onclick="location.reload()">Erneut versuchen</button>
+    </main>
+  </body>
+</html>

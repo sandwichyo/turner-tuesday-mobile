@@ -1,0 +1,72 @@
+services:
+  php:
+    build:
+      context: .
+      dockerfile: docker/development/php/Dockerfile
+    depends_on:
+      - mariadb
+    environment:
+      START_GG_CLIENT_ID: ${START_GG_CLIENT_ID:-}
+      START_GG_CLIENT_SECRET: ${START_GG_CLIENT_SECRET:-}
+      START_GG_REDIRECT_URI: ${START_GG_REDIRECT_URI:-http://localhost:8080/api/startgg/oauth/callback}
+      START_GG_SCOPES: ${START_GG_SCOPES:-user.identity}
+      INERTIA_SSR_ENABLED: ${INERTIA_SSR_ENABLED:-true}
+      INERTIA_SSR_URL: http://ssr:13714
+      DATABASE_URL: "${DATABASE_URL:-mysql://melee:melee@mariadb:3306/melee?serverVersion=11.4.0-MariaDB&charset=utf8mb4}"
+      # Browser origins allowed to call the public API (/api/versions, /api/v1).
+      API_ALLOWED_ORIGINS: ${API_ALLOWED_ORIGINS:-*}
+      # Seat limit shown as "Anmeldungen x/y" on the homepage; 0 = no limit.
+      TURNER_TUESDAY_CAPACITY: ${TURNER_TUESDAY_CAPACITY:-8}
+      # Web push; generate with `make vapid-keys`, then put them in the root .env.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@example.com}
+    volumes:
+      - ./backend:/var/www/backend
+    working_dir: /var/www/backend
+
+  mariadb:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-melee}
+      MARIADB_USER: ${MARIADB_USER:-melee}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-melee}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ssr:
+    image: node:22-alpine
+    working_dir: /app
+    command: node ssr/ssr.js
+    volumes:
+      - ./backend:/app:ro
+    expose:
+      - "13714"
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/development/nginx/Dockerfile
+    depends_on:
+      - php
+      - ssr
+    ports:
+      - "8080:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./backend:/var/www/backend:ro
+      - ./assets:/var/www/assets:ro
+      - ./docker/nginx/.htpasswd:/etc/nginx/.htpasswd:ro
+
+volumes:
+  mariadb_data:

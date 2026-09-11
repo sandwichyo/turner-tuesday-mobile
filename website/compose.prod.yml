@@ -1,0 +1,101 @@
+# Production stack for the remote server. Pulls the images CI publishes from
+# docker/deployment/* and connects to the global (external) MariaDB.
+#
+# Required variables in the .env next to this file on the server:
+#   DATABASE_URL  mysql://<user>:<pass>@<db-host>:3306/<db>?serverVersion=11.4.0-MariaDB&charset=utf8mb4
+#   INERTIA_VERSION, START_GG_CLIENT_ID, START_GG_CLIENT_SECRET, START_GG_REDIRECT_URI
+#   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT  (web push)
+#
+# The php entrypoint waits for the database and runs doctrine migrations on start.
+
+networks:
+  # Internal network for the app containers (php <-> ssr <-> nginx).
+  melee-im-norden:
+  # Shared edge network with the https-portal reverse proxy (created elsewhere).
+  http:
+    external: true
+  # Shared network the global MariaDB is attached to.
+  database:
+    external: true
+  # Shared network the external deck-chores cron scheduler is attached to.
+  cron:
+    external: true
+
+volumes:
+  symfony_startgg:
+  symfony_cache:
+
+services:
+  ssr:
+    image: ghcr.io/sandwichyo/meleeimnorden-ssr:staging
+    restart: unless-stopped
+    networks:
+      - melee-im-norden
+
+  php:
+    image: ghcr.io/sandwichyo/meleeimnorden-php:staging
+    restart: unless-stopped
+    depends_on:
+      - ssr
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+      # Global MariaDB. The entrypoint waits for it and applies migrations.
+      DATABASE_URL: ${DATABASE_URL:-}
+      START_GG_CLIENT_ID: ${START_GG_CLIENT_ID:-}
+      START_GG_CLIENT_SECRET: ${START_GG_CLIENT_SECRET:-}
+      START_GG_REDIRECT_URI: ${START_GG_REDIRECT_URI:-https://example.com/api/startgg/oauth/callback}
+      START_GG_SCOPES: ${START_GG_SCOPES:-user.identity}
+      INERTIA_SSR_ENABLED: "true"
+      INERTIA_SSR_URL: http://ssr:13714
+      INERTIA_VERSION: ${INERTIA_VERSION:-1}
+      # Browser origins allowed to call the public API (/api/versions, /api/v1);
+      # comma-separated, or "*" for any. Native apps ignore CORS entirely.
+      API_ALLOWED_ORIGINS: ${API_ALLOWED_ORIGINS:-*}
+      # Seat limit shown as "Anmeldungen x/y" on the homepage; 0 = no limit.
+      TURNER_TUESDAY_CAPACITY: ${TURNER_TUESDAY_CAPACITY:-8}
+      # Web Push (see `app:push:vapid-keys`); without these the /admin push
+      # form stays disabled.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@example.com}
+    env_file: .env
+    volumes:
+      - symfony_startgg:/var/www/backend/var/startgg
+      - symfony_cache:/var/www/backend/var/cache/prod/pools
+    labels:
+      # Daily incremental start.gg import, executed inside this container by the
+      # external deck-chores scheduler (funkyfuture/deck-chores). deck-chores'
+      # cron fields run largest-unit-first (… hour minute second) with missing
+      # fields defaulting to `*`, so `3 0 0` = hour 3, minute 0, second 0, i.e.
+      # once daily at 03:00. Without the timezone it would schedule in UTC.
+      cron.meleeimnorden-import.command: 'php bin/console app:import --incremental'
+      cron.meleeimnorden-import.cron: '3 0 0'
+      cron.meleeimnorden-import.timezone: 'Europe/Berlin'
+      cron.meleeimnorden-import.user: 'www-data'
+      # Slippi's Free Ranked Day starts every four days at 08:00 UTC, so this
+      # job is scheduled in UTC too — in local time the window would drift by an
+      # hour across DST. The command notifies only while a window is open and
+      # remembers the one it announced, so extra runs stay silent.
+      cron.meleeimnorden-ranked-day.command: 'php bin/console app:push:ranked-day'
+      cron.meleeimnorden-ranked-day.cron: '8 5 0'
+      cron.meleeimnorden-ranked-day.timezone: 'UTC'
+      cron.meleeimnorden-ranked-day.user: 'www-data'
+    networks:
+      # nginx reaches php via `fastcgi_pass melee-php:9000`.
+      melee-im-norden:
+        aliases:
+          - melee-php
+      # Reach the global MariaDB (host taken from DATABASE_URL).
+      database:
+      # deck-chores discovers this container's cron labels over this network.
+      cron:
+
+  nginx:
+    image: ghcr.io/sandwichyo/meleeimnorden-nginx:staging
+    restart: unless-stopped
+    depends_on:
+      - php
+    networks:
+      - melee-im-norden
+      - http

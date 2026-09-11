@@ -1,0 +1,69 @@
+# yaml-language-server: $schema=../vendor/symfony/dependency-injection/Loader/schema/services.schema.json
+
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+# See also https://symfony.com/doc/current/service_container/import.html
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
+parameters:
+    start_gg.client_id: "%env(default::START_GG_CLIENT_ID)%"
+    start_gg.client_secret: "%env(default::START_GG_CLIENT_SECRET)%"
+    start_gg.redirect_uri: "%env(default::START_GG_REDIRECT_URI)%"
+    start_gg.scopes: "%env(default::START_GG_SCOPES)%"
+    start_gg.token_store_path: "%kernel.project_dir%/var/startgg/oauth_tokens.json"
+    frontend.app_url: "%env(default::FRONTEND_APP_URL)%"
+    inertia.version: "%env(INERTIA_VERSION)%"
+    inertia.ssr_enabled: "%env(bool:INERTIA_SSR_ENABLED)%"
+    inertia.ssr_url: "%env(INERTIA_SSR_URL)%"
+    push.vapid_public_key: "%env(VAPID_PUBLIC_KEY)%"
+    push.vapid_private_key: "%env(VAPID_PRIVATE_KEY)%"
+    push.vapid_subject: "%env(VAPID_SUBJECT)%"
+    api.allowed_origins: "%env(API_ALLOWED_ORIGINS)%"
+    event.upcoming_capacity: "%env(int:TURNER_TUESDAY_CAPACITY)%"
+
+    # Default env values (overridden by the container / .env in every real deploy)
+    env(DATABASE_URL): "mysql://melee:melee@127.0.0.1:3306/melee?serverVersion=11.4.0-MariaDB&charset=utf8mb4"
+    env(PHP_CLI_BINARY): "php"
+    env(VAPID_PUBLIC_KEY): ""
+    env(VAPID_PRIVATE_KEY): ""
+    env(VAPID_SUBJECT): "mailto:admin@example.com"
+    # Browser origins allowed to call the public API; "*" because it is
+    # read-only, credential-free and serves the same data as the website.
+    env(API_ALLOWED_ORIGINS): "*"
+    # Seat limit of a Turner Tuesday. start.gg exposes no registration cap, so
+    # the number lives here; 0 turns the "x/y" counter back into a plain count.
+    env(TURNER_TUESDAY_CAPACITY): 8
+
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: true # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        bind:
+            $clientId: "%start_gg.client_id%"
+            $clientSecret: "%start_gg.client_secret%"
+            $redirectUri: "%start_gg.redirect_uri%"
+            $scopes: "%start_gg.scopes%"
+            $tokenStorePath: "%start_gg.token_store_path%"
+            $frontendAppUrl: "%frontend.app_url%"
+            $appCache: "@cache.app"
+            $inertiaVersion: "%inertia.version%"
+            $ssrEnabled: "%inertia.ssr_enabled%"
+            $ssrUrl: "%inertia.ssr_url%"
+            $projectDir: "%kernel.project_dir%"
+            $appEnv: "%kernel.environment%"
+            $phpBinary: "%env(PHP_CLI_BINARY)%"
+            $vapidPublicKey: "%push.vapid_public_key%"
+            $vapidPrivateKey: "%push.vapid_private_key%"
+            $vapidSubject: "%push.vapid_subject%"
+            $apiAllowedOrigins: "%api.allowed_origins%"
+            $upcomingEventCapacity: "%event.upcoming_capacity%"
+
+    # makes classes in src/ available to be used as services
+    # this creates a service per class whose id is the fully-qualified class name
+    App\:
+        resource: "../src/"
+
+    # add more service definitions when explicit configuration is needed
+    # please note that last definitions always *replace* previous ones
