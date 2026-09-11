@@ -3,51 +3,42 @@
 @tailwind utilities;
 
 /**
- * Die beiden daisyUI-Themes der Website als Variablen. Kanal-Tripel ohne
- * `rgb()`, weil tailwind.config.js sie in `rgb(var(…) / <alpha-value>)` setzt
- * und damit `bg-base-100/50` weiterhin funktioniert.
+ * Das Dark-Theme der Website (daisyUI "dark") als feste Palette.
+ *
+ * Die App läuft bewusst nur dunkel — so, wie die Seite im Original aussieht.
+ * Deshalb stehen die Werte direkt in `:root` und es gibt keinen
+ * prefers-color-scheme-Zweig: das Systemschema des Geräts soll hier nichts
+ * umschalten. Die Light-Werte stehen als Kommentar daneben, falls ein
+ * Umschalter später doch gewünscht ist.
+ *
+ * Kanal-Tripel ohne `rgb()`, weil tailwind.config.js sie in
+ * `rgb(var(…) / <alpha-value>)` setzt — `bg-base-100/50` funktioniert damit.
  */
 @layer base {
   :root {
-    --color-base-100: 255 255 255;
-    --color-base-200: 242 242 242;
-    --color-base-300: 229 230 230;
-    --color-base-content: 31 41 55;
-    --color-base-muted: 107 114 128;
+    --color-base-100: 29 35 42; /* light: 255 255 255 */
+    --color-base-200: 25 30 36; /* light: 242 242 242 */
+    --color-base-300: 21 25 30; /* light: 229 230 230 */
+    --color-base-content: 166 173 187; /* light: 31 41 55 */
+    --color-base-muted: 122 130 144; /* light: 107 114 128 */
 
-    --color-primary: 73 30 255;
+    --color-primary: 116 128 255; /* light: 73 30 255 */
     --color-primary-content: 255 255 255;
-    --color-secondary: 255 65 199;
-    --color-accent: 0 207 189;
-    --color-neutral: 43 52 64;
+    --color-secondary: 255 82 217; /* light: 255 65 199 */
+    --color-accent: 0 205 183;
+    --color-neutral: 42 50 60;
 
     --color-info: 0 179 240;
     --color-success: 0 169 110;
     --color-warning: 255 190 0;
     --color-error: 255 88 97;
 
-    --color-gold: 202 138 4;
-    --color-silver: 148 163 184;
-    --color-bronze: 180 83 9;
-  }
+    --color-gold: 250 204 21;
+    --color-silver: 203 213 225;
+    --color-bronze: 217 119 6;
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --color-base-100: 29 35 42;
-      --color-base-200: 25 30 36;
-      --color-base-300: 21 25 30;
-      --color-base-content: 166 173 187;
-      --color-base-muted: 122 130 144;
-
-      --color-primary: 116 128 255;
-      --color-primary-content: 255 255 255;
-      --color-secondary: 255 82 217;
-      --color-accent: 0 205 183;
-      --color-neutral: 42 50 60;
-
-      --color-gold: 250 204 21;
-      --color-silver: 203 213 225;
-      --color-bronze: 217 119 6;
-    }
+    /* Der start.gg-Button: im Dark-Theme weiß mit dunkler Schrift. */
+    --color-startgg: 255 255 255;
+    --color-startgg-content: 27 31 42;
   }
 }

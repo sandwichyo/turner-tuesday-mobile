@@ -52,20 +52,48 @@ Build über `API_BASE_URL` überschreiben.
 NativeWind 4 mit Tailwind 3.4, wie im Web. **daisyUI läuft hier nicht** — es ist
 ein CSS-Plugin, und React Native hat keine CSS-Engine. Übernommen sind nur die
 Farbnamen (`bg-base-100`, `text-base-content`, …), definiert als CSS-Variablen
-in `src/global.css` und als Tokens in `tailwind.config.js`. Hell/Dunkel folgt
-dem Systemschema. Die Komponenten liegen in `src/components/ui/`.
+in `src/global.css` und als Tokens in `tailwind.config.js`. Die Komponenten
+liegen in `src/components/ui/`.
+
+Die App läuft **fest im Dark-Theme** des Originals — das Systemschema schaltet
+nichts um. Verankert ist das an drei Stellen: `:root` in `src/global.css` (ohne
+prefers-color-scheme-Zweig, die Light-Werte stehen als Kommentar daneben),
+`userInterfaceStyle: "dark"` in `app.json` und `DarkTheme` im Root-Layout.
+
+Den Rahmen des Web-Layouts stellt `src/components/screen.tsx`: `bg-base-200`,
+darüber das Turnier-Hintergrundbild mit 20 % Deckkraft, darauf die Navbar mit
+Logo und start.gg-Verweis. Die Bottom-Navigation ersetzt die Seitenlinks der
+Navbar.
 
 ## Stand
 
-Portiert: Power Ranking, Event-Liste.
+Alle vier Screens des Originals sind portiert:
+
+| Screen | Route | Inhalt |
+| --- | --- | --- |
+| Turner Overview | `(tabs)/index` | Event-Auswahl mit Suche, Endplatzierungen, Ranking-Tabelle |
+| Power Ranking | `(tabs)/power-ranking` | Bereichs- und Zeitraumwechsel, Legende, Spielerkarten mit Kostüm-Overrides |
+| Event-Detail | `(tabs)/events/[eventId]` | Turnierverlauf nach Bracket-Runden, Charakterwahl, Endplatzierungen |
+| Spieler-Detail | `(tabs)/players/[playerId]` | Platzierungsverlauf, Events, Charaktere, H2H |
+
+Die Detail-Routen liegen bewusst **innerhalb** der Tab-Gruppe (mit
+`href: null`), damit die Bottom-Navigation auf ihnen stehen bleibt — im Web
+bleibt die Navbar auf jeder Unterseite ebenfalls sichtbar.
+
+### Bracket-Gruppierung
+
+`src/lib/bracket.ts` ist der TypeScript-Port von
+`reference/EventDetailBuilder.php` (329 Zeilen PHP). Die API liefert unter
+`/api/v1/events/{id}` ein flaches `sets[]`; die Runden, ihre Reihenfolge vom
+Grand Final hinunter zu den Pools und die Paarung von Winners- und
+Losers-Runden desselben Schritts entstehen erst hier.
+
+Zwei Abweichungen von der Vorlage, beide unvermeidbar: das Feld heißt in der
+API `phase` statt `phaseName`, und `sortOrder` gibt es nicht — an seine Stelle
+tritt der Array-Index, weil der Vertrag die Sets in Bracket-Reihenfolge zusagt.
 
 Offen:
 
-- **Event-Detail** — braucht die Bracket-Gruppierung aus
-  `reference/EventDetailBuilder.php` in TypeScript; die API liefert ein flaches
-  `sets[]`.
-- **Spieler-Detail** — inkl. Platzierungsverlauf (im Web chart.js, hier
-  `react-native-svg`).
 - **Anmeldezähler** auf der Übersicht — die Zahl kommt live von start.gg und ist
   in der API noch nicht exponiert. Braucht einen Endpunkt.
 - **Push** — das Web nutzt Web-Push (VAPID); nativ braucht es FCM/APNs. Auf iOS

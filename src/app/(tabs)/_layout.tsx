@@ -1,27 +1,29 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Tabs } from "expo-router";
-import { useColorScheme } from "react-native";
 
 /**
- * Die Tab-Farben kommen aus denselben Tokens wie global.css. NativeWind-Klassen
- * greifen in den Optionen der Navigation nicht, deshalb hier als Werte.
+ * Die Bottom-Navigation. Farben als Werte, weil NativeWind-Klassen in den
+ * Optionen der Navigation nicht greifen — die Werte sind dieselben Tokens wie
+ * in global.css, hier fest im Dark-Theme.
  */
 const COLORS = {
-  light: { active: "rgb(73 30 255)", inactive: "rgb(107 114 128)", bg: "rgb(255 255 255)" },
-  dark: { active: "rgb(116 128 255)", inactive: "rgb(122 130 144)", bg: "rgb(29 35 42)" },
+  active: "rgb(116 128 255)",
+  inactive: "rgb(122 130 144)",
+  background: "rgb(29 35 42)",
+  border: "rgb(21 25 30)",
 };
 
 export default function TabsLayout() {
-  const scheme = useColorScheme() === "dark" ? "dark" : "light";
-  const colors = COLORS[scheme];
-
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.active,
-        tabBarInactiveTintColor: colors.inactive,
-        tabBarStyle: { backgroundColor: colors.bg, borderTopWidth: 0 },
+        tabBarActiveTintColor: COLORS.active,
+        tabBarInactiveTintColor: COLORS.inactive,
+        tabBarStyle: {
+          backgroundColor: COLORS.background,
+          borderTopColor: COLORS.border,
+        },
       }}
     >
       <Tabs.Screen
@@ -42,6 +44,14 @@ export default function TabsLayout() {
           ),
         }}
       />
+
+      {/*
+        Die Detail-Screens gehören in den Tab-Navigator, damit die
+        Bottom-Navigation stehen bleibt — im Web bleibt die Navbar auch auf
+        jeder Unterseite. `href: null` hält sie aus der Leiste heraus.
+      */}
+      <Tabs.Screen name="events/[eventId]" options={{ href: null }} />
+      <Tabs.Screen name="players/[playerId]" options={{ href: null }} />
     </Tabs>
   );
 }

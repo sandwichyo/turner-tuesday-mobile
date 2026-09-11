@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
+import { DarkTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
-import { useColorScheme } from "react-native";
 
 import "../global.css";
 
@@ -10,8 +10,6 @@ SplashScreen.preventAutoHideAsync();
 SplashScreen.hideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   /**
    * Der Client gehört in den State, nicht ins Modul: beim Fast Refresh würde
    * ein Modul-Singleton sonst den Cache über Reloads hinweg festhalten.
@@ -33,7 +31,9 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+      {/* Fest dunkel, wie das Original — nicht dem Systemschema folgend. */}
+      <ThemeProvider value={DarkTheme}>
+        <StatusBar style="light" />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
         </Stack>

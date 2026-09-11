@@ -8,17 +8,22 @@
  */
 import { Image } from "expo-image";
 import { useMemo, useState } from "react";
-import { FlatList, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { FlatList, Linking, Pressable, Text, View } from "react-native";
 
-import { useRanking } from "@/lib/api/queries";
+import { router } from "expo-router";
+
+import { useRanking, useScopeOptions } from "@/lib/api/queries";
 import type { RankingRow, RankingScope, RankingSection } from "@/lib/api/types";
 import { getCharacterStyle } from "@/lib/characters";
 import { getPlayerImage } from "@/lib/player-images";
+import { Screen } from "@/components/screen";
 import { DotBadge, type BadgeTone } from "@/components/ui/badge";
 import { Card, CardBody } from "@/components/ui/card";
+import { Hero } from "@/components/ui/hero";
 import { Segmented } from "@/components/ui/segmented";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/states";
+
+const STARTGG_URL = "https://start.gg/whv";
 
 /** "Gesamt" plus die Halbjahre — dieselbe Reihenfolge wie im Web. */
 type Period = RankingSection & { key: string; label: string };
@@ -42,11 +47,31 @@ function missedTone(missed: number): BadgeTone {
   return missed <= 5 ? "warning" : "error";
 }
 
-const RANK_STYLES: Record<number, { border: string; number: string }> = {
-  1: { border: "border-gold", number: "text-gold" },
-  2: { border: "border-silver", number: "text-silver" },
-  3: { border: "border-bronze", number: "text-bronze" },
+const RANK_STYLES: Record<number, { border: string; number: string; glow: string }> = {
+  1: { border: "border-gold", number: "text-gold", glow: "shadow-gold/30" },
+  2: { border: "border-silver", number: "text-silver", glow: "shadow-silver/20" },
+  3: { border: "border-bronze", number: "text-bronze", glow: "shadow-bronze/20" },
 };
+
+/** Die drei Farbstufen unter den Umschaltern, wie im Web. */
+function Legend() {
+  const entries: { tone: BadgeTone; label: string }[] = [
+    { tone: "success", label: "Keine Events verpasst" },
+    { tone: "warning", label: "1–5 Events verpasst" },
+    { tone: "error", label: "Über 5 Events verpasst" },
+  ];
+
+  return (
+    <View className="flex-row flex-wrap gap-x-4 gap-y-1 px-4">
+      {entries.map((entry) => (
+        <View key={entry.tone} className="flex-row items-center gap-1.5">
+          <DotBadge tone={entry.tone} />
+          <Text className="text-sm text-base-muted">{entry.label}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 function PlayerCard({ row, eventsConsidered }: { row: RankingRow; eventsConsidered: number }) {
   const rank = row.rank ?? 0;
@@ -56,7 +81,16 @@ function PlayerCard({ row, eventsConsidered }: { row: RankingRow; eventsConsider
   const characterStyle = getCharacterStyle(row.topCharacter?.characterName);
 
   return (
-    <Card className={`mb-4 overflow-hidden border-2 ${rankStyle?.border ?? "border-base-300"}`}>
+    <Pressable
+      onPress={() => router.push(`/players/${encodeURIComponent(row.playerId ?? "")}`)}
+      accessibilityRole="link"
+      accessibilityLabel={`${row.displayName}, Platz ${rank}`}
+    >
+    <Card
+      className={`mb-4 overflow-hidden border-2 ${rankStyle?.border ?? "border-base-300"} ${
+        rankStyle?.glow ?? ""
+      }`}
+    >
       {image ? (
         <Image
           source={image}
@@ -79,7 +113,7 @@ function PlayerCard({ row, eventsConsidered }: { row: RankingRow; eventsConsider
 
         {row.topCharacter ? (
           <View
-            className="self-start flex-row items-center gap-1.5 rounded-full px-3 py-1"
+            className="flex-row items-center gap-1.5 self-start rounded-full px-3 py-1"
             style={{ backgroundColor: characterStyle.background }}
           >
             <Text className="text-sm font-semibold" style={{ color: characterStyle.color }}>
@@ -106,6 +140,7 @@ function PlayerCard({ row, eventsConsidered }: { row: RankingRow; eventsConsider
         </View>
       </CardBody>
     </Card>
+    </Pressable>
   );
 }
 
@@ -114,6 +149,8 @@ export default function PowerRankingScreen() {
   const [periodKey, setPeriodKey] = useState<string>(currentHalfYearKey());
 
   const { data, isPending, error, refetch, isRefetching } = useRanking("power", scope);
+  const scopeOptions = useScopeOptions("power");
+  const openStartGg = () => Linking.openURL(STARTGG_URL);
 
   const periods = useMemo<Period[]>(() => {
     if (!data) return [];
@@ -158,17 +195,17 @@ export default function PowerRankingScreen() {
 
   if (isPending) {
     return (
-      <SafeAreaView className="flex-1 bg-base-200" edges={["top"]}>
+      <Screen onOpenStartGg={openStartGg}>
         <LoadingState label="Power Ranking wird geladen …" />
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView className="flex-1 bg-base-200" edges={["top"]}>
+      <Screen onOpenStartGg={openStartGg}>
         <ErrorState message={error.message} onRetry={() => refetch()} />
-      </SafeAreaView>
+      </Screen>
     );
   }
 
@@ -176,39 +213,7 @@ export default function PowerRankingScreen() {
   const eventsConsidered = activePeriod?.eventsConsidered ?? 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-base-200" edges={["top"]}>
-      <View className="gap-3 pb-3">
-        <View className="px-4 pt-2">
-          <Text className="text-3xl font-bold text-base-content">Power Ranking</Text>
-          <Text className="text-base-muted">Turner Tuesday Series</Text>
-        </View>
-
-        <Segmented
-          options={[
-            { key: "qualified", label: data?.scopeLabel ?? "Qualifiziert" },
-            { key: "all", label: "Alle Events" },
-          ]}
-          value={scope}
-          onChange={(key) => setScope(key as RankingScope)}
-        />
-
-        {periods.length > 1 ? (
-          <Segmented
-            options={periods.map(({ key, label }) => ({ key, label }))}
-            value={activePeriod?.key ?? OVERALL_KEY}
-            onChange={setPeriodKey}
-            tone="secondary"
-          />
-        ) : null}
-
-        <Text className="px-4 text-sm text-base-muted">
-          {eventsConsidered} Events berücksichtigt
-          {data?.rules?.minimumEntrants != null
-            ? ` · mind. ${data.rules.minimumEntrants} Teilnehmer pro Event`
-            : ""}
-        </Text>
-      </View>
-
+    <Screen onOpenStartGg={openStartGg}>
       <FlatList
         data={rows}
         keyExtractor={(row) => row.playerId ?? String(row.rank)}
@@ -218,6 +223,37 @@ export default function PowerRankingScreen() {
         contentContainerClassName="px-4 pb-8"
         refreshing={isRefetching}
         onRefresh={refetch}
+        ListHeaderComponent={
+          <View className="-mx-4 gap-3 pb-4">
+            <View className="px-4">
+              <Hero title="Power Ranking" subtitle="Turner Tuesday Series" />
+            </View>
+
+            <Segmented
+              options={scopeOptions}
+              value={scope}
+              onChange={(key) => setScope(key as RankingScope)}
+            />
+
+            {periods.length > 1 ? (
+              <Segmented
+                options={periods.map(({ key, label }) => ({ key, label }))}
+                value={activePeriod?.key ?? OVERALL_KEY}
+                onChange={setPeriodKey}
+                tone="secondary"
+              />
+            ) : null}
+
+            <Text className="px-4 text-sm text-base-muted">
+              {eventsConsidered} Events berücksichtigt
+              {data?.rules?.minimumEntrants != null
+                ? ` · mind. ${data.rules.minimumEntrants} Teilnehmer pro Event`
+                : ""}
+            </Text>
+
+            <Legend />
+          </View>
+        }
         ListEmptyComponent={
           <EmptyState
             message="Keine Daten für diesen Zeitraum verfügbar."
@@ -232,6 +268,6 @@ export default function PowerRankingScreen() {
           />
         }
       />
-    </SafeAreaView>
+    </Screen>
   );
 }

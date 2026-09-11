@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "turnertuesdays",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "de.turnertuesdays.app",
@@ -43,6 +43,11 @@
     },
     "extra": {
       "apiBaseUrl": "https://melee.sandwichyo.com"
+    },
+    "backgroundColor": "#191e24",
+    "androidStatusBar": {
+      "barStyle": "light-content",
+      "backgroundColor": "#1d232a"
     }
   }
 }

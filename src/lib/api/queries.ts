@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ApiError, apiGet, endpoints } from "./client";
 import type {
   EventDetail,
+  RankingDescriptor,
   EventSummary,
   Meta,
   PlayerDetail,
@@ -27,6 +28,35 @@ function retry(failureCount: number, error: unknown): boolean {
   }
 
   return failureCount < 2;
+}
+
+/**
+ * Der Index der Ranglisten: Beschriftungen und Regeln beider Bereiche in einem
+ * Aufruf. Die Tabellen selbst kennen nur den Bereich, den man abgefragt hat —
+ * für die Umschalter braucht es aber beide Beschriftungen.
+ */
+export function useRankingDescriptors() {
+  return useQuery<RankingDescriptor[], ApiError>({
+    queryKey: ["rankings"],
+    queryFn: ({ signal }) =>
+      apiGet<RankingDescriptor[]>(endpoints.rankings(), { signal }).then(
+        (envelope) => envelope.data,
+      ),
+    // Ändert sich nur mit einem Deploy, nicht mit den Daten.
+    staleTime: 60 * 60 * 1000,
+    retry,
+  });
+}
+
+/** Die Umschalter-Beschriftungen einer Rangliste, in der Reihenfolge der API. */
+export function useScopeOptions(type: RankingType) {
+  const { data } = useRankingDescriptors();
+  const descriptor = data?.find((entry) => entry.type === type);
+
+  return (descriptor?.scopes ?? []).map((scope) => ({
+    key: scope.scope ?? "",
+    label: scope.label ?? "",
+  }));
 }
 
 export function useRanking(type: RankingType, scope: RankingScope) {

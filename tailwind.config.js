@@ -34,6 +34,9 @@ module.exports = {
         success: withAlpha("--color-success"),
         warning: withAlpha("--color-warning"),
         error: withAlpha("--color-error"),
+        // Der neutrale start.gg-Button; sein Logo ist mehrfarbig.
+        startgg: withAlpha("--color-startgg"),
+        "startgg-content": withAlpha("--color-startgg-content"),
         // Die Podiumsfarben des Power Rankings.
         gold: withAlpha("--color-gold"),
         silver: withAlpha("--color-silver"),
