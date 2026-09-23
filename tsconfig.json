@@ -23,6 +23,7 @@
     "website",
     "reference",
     ".expo",
-    "dist"
+    "dist",
+    "**/*.check.ts"
   ]
 }

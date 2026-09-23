@@ -15,6 +15,19 @@ import {
   Tooltip,
 } from "chart.js";
 import { Line } from "vue-chartjs";
+import { useTenant } from "../../composables/useTenant";
+import TimeRangeSlider, {
+  type TimeRange,
+} from "../../components/TimeRangeSlider.vue";
+import {
+  type CharacterRenderBox,
+  getCharacterImageUrl,
+  getCharacterRenderBox,
+  getCharacterStyle,
+  getStockIconUrl,
+} from "../../lib/characters";
+
+const { tenant, url } = useTenant();
 
 ChartJS.register(
   Title,
@@ -58,6 +71,18 @@ type H2hSummary = {
   losses: number;
 };
 
+type H2hTimelineEntry = {
+  eventId: number;
+  label: string;
+  startAt: number | null;
+  opponents: {
+    playerId: string;
+    displayName: string;
+    wins: number;
+    losses: number;
+  }[];
+};
+
 type CharacterStat = {
   characterId: number;
   characterName: string;
@@ -65,20 +90,224 @@ type CharacterStat = {
   percentage: number;
 };
 
+type CharacterTimelineEntry = {
+  eventId: number;
+  label: string;
+  startAt: number | null;
+  characters: { characterId: number; characterName: string; count: number }[];
+};
+
 const props = defineProps<{
   player: PlayerSummary | null;
   placements?: PlacementPoint[];
-  h2h?: { summary: H2hSummary; opponents: H2hOpponent[] };
-  characters?: { totalSelections: number; top: CharacterStat[] };
+  h2h?: {
+    summary: H2hSummary;
+    opponents: H2hOpponent[];
+    timeline?: H2hTimelineEntry[];
+  };
+  characters?: {
+    totalSelections: number;
+    top: CharacterStat[];
+    timeline?: CharacterTimelineEntry[];
+  };
   error?: string | null;
 }>();
 
 const placements = computed(() => props.placements ?? []);
 const h2hSummary = computed(() => props.h2h?.summary ?? { wins: 0, losses: 0 });
 const h2hOpponents = computed(() => props.h2h?.opponents ?? []);
+const h2hTimeline = computed<H2hTimelineEntry[]>(
+  () => props.h2h?.timeline ?? [],
+);
 const characterSelections = computed(() => props.characters?.top ?? []);
 const totalCharacterSelections = computed(
   () => props.characters?.totalSelections ?? 0,
+);
+const characterTimeline = computed<CharacterTimelineEntry[]>(
+  () => props.characters?.timeline ?? [],
+);
+
+// --- Zeitraum-Regler ---
+// Beide Bereiche der Seite lassen sich unabhaengig voneinander eingrenzen. Die
+// Regler liefern `null`, solange der volle Bereich gewaehlt ist ("Gesamt") —
+// dann bleibt das vom Server gerechnete Aggregat stehen.
+function eventRangeLabels(
+  entries: { startAt: number | null; label: string }[],
+): string[] {
+  return entries.map((entry) => formatDate(entry.startAt) || entry.label || "Event");
+}
+
+const characterRange = ref<TimeRange | null>(null);
+const characterRangeLabels = computed(() =>
+  eventRangeLabels(characterTimeline.value),
+);
+
+const h2hRange = ref<TimeRange | null>(null);
+const h2hRangeLabels = computed(() => eventRangeLabels(h2hTimeline.value));
+
+// Die Charakterstatistik des gewaehlten Zeitraums.
+const rangedCharacters = computed<{ total: number; top: CharacterStat[] }>(
+  () => {
+    const range = characterRange.value;
+
+    if (range === null || characterTimeline.value.length === 0) {
+      return {
+        total: totalCharacterSelections.value,
+        top: characterSelections.value,
+      };
+    }
+
+    const counts = new Map<string, CharacterStat>();
+    let total = 0;
+
+    for (const entry of characterTimeline.value.slice(
+      range.from,
+      range.to + 1,
+    )) {
+      for (const character of entry.characters) {
+        const existing = counts.get(character.characterName);
+        if (existing) {
+          existing.count += character.count;
+          existing.characterId = Math.min(
+            existing.characterId,
+            character.characterId,
+          );
+        } else {
+          counts.set(character.characterName, {
+            characterId: character.characterId,
+            characterName: character.characterName,
+            count: character.count,
+            percentage: 0,
+          });
+        }
+        total += character.count;
+      }
+    }
+
+    const top = [...counts.values()]
+      .map((character) => ({
+        ...character,
+        percentage:
+          total > 0 ? Math.round((character.count / total) * 1000) / 10 : 0,
+      }))
+      .sort(
+        (left, right) =>
+          right.count - left.count ||
+          left.characterName.localeCompare(right.characterName),
+      );
+
+    return { total, top };
+  },
+);
+
+// Die H2H-Bilanz des gewaehlten Zeitraums. Reihenfolge und Rundung folgen dem
+// Server (RankingCalculator), damit "Gesamt" und ein voll aufgezogener Regler
+// dieselbe Liste ergeben.
+const rangedH2h = computed<{
+  summary: H2hSummary;
+  opponents: H2hOpponent[];
+}>(() => {
+  const range = h2hRange.value;
+
+  if (range === null || h2hTimeline.value.length === 0) {
+    return { summary: h2hSummary.value, opponents: h2hOpponents.value };
+  }
+
+  const byOpponent = new Map<string, H2hOpponent>();
+  let wins = 0;
+  let losses = 0;
+
+  for (const entry of h2hTimeline.value.slice(range.from, range.to + 1)) {
+    for (const opponent of entry.opponents) {
+      let existing = byOpponent.get(opponent.playerId);
+      if (!existing) {
+        // Aelteste Schreibweise gewinnt — wie beim Server, der den Namen beim
+        // ersten Zusammentreffen festhaelt.
+        existing = {
+          playerId: opponent.playerId,
+          displayName: opponent.displayName,
+          wins: 0,
+          losses: 0,
+          totalSets: 0,
+          winRate: 0,
+        };
+        byOpponent.set(opponent.playerId, existing);
+      }
+      existing.wins += opponent.wins;
+      existing.losses += opponent.losses;
+      wins += opponent.wins;
+      losses += opponent.losses;
+    }
+  }
+
+  const opponents = [...byOpponent.values()]
+    .map((opponent) => {
+      const totalSets = opponent.wins + opponent.losses;
+      return {
+        ...opponent,
+        totalSets,
+        winRate:
+          totalSets > 0 ? Math.round((opponent.wins / totalSets) * 1000) / 10 : 0,
+      };
+    })
+    .sort(
+      (left, right) =>
+        right.totalSets - left.totalSets ||
+        right.wins - left.wins ||
+        left.losses - right.losses ||
+        left.displayName.localeCompare(right.displayName, undefined, {
+          sensitivity: "base",
+          numeric: true,
+        }),
+    );
+
+  return { summary: { wins, losses }, opponents };
+});
+
+// --- Charakter-Lineup ---
+// Die Charaktere stehen nebeneinander auf einer gemeinsamen Standlinie, der
+// meistgespielte gibt mit voller Hoehe die Richtlinie vor. Die Wurzel staucht
+// das Verhaeltnis: streng linear faellt ein Charakter mit 5 % Anteil auf ein
+// Zwanzigstel zusammen und ist nicht mehr zu erkennen.
+const LINEUP_LIMIT = 5;
+
+type LineupEntry = CharacterStat & {
+  scale: number;
+  imageUrl: string | null;
+  iconUrl: string | null;
+  box: CharacterRenderBox;
+  style: { background: string; color: string };
+  offset: number;
+  depth: number;
+};
+
+const lineup = computed<LineupEntry[]>(() => {
+  const top = rangedCharacters.value.top.slice(0, LINEUP_LIMIT);
+  const maxCount = top[0]?.count ?? 0;
+
+  return top.map((character, index) => ({
+    ...character,
+    scale: maxCount > 0 ? Math.sqrt(character.count / maxCount) : 1,
+    imageUrl: getCharacterImageUrl(character.characterName),
+    iconUrl: getStockIconUrl(character.characterName),
+    box: getCharacterRenderBox(character.characterName),
+    style: getCharacterStyle(character.characterName),
+    // Jeder zweite steht eine Spur tiefer, die hinteren rutschen zusaetzlich
+    // nach unten — das erzeugt die versetzte Staffelung.
+    offset: (index % 2 === 0 ? 0 : 5) + index * 1.5,
+    // Nach hinten leicht abdunkeln, damit die Reihenfolge auch ohne Zahlen lesbar ist.
+    depth: Math.max(0.62, 1 - index * 0.11),
+  }));
+});
+
+type CharacterChip = CharacterStat & { iconUrl: string | null };
+
+// Unter der Buehne stehen alle Charaktere, nicht nur die fuenf gezeichneten.
+const characterChips = computed<CharacterChip[]>(() =>
+  rangedCharacters.value.top.map((character) => ({
+    ...character,
+    iconUrl: getStockIconUrl(character.characterName),
+  })),
 );
 
 const bestPlacement = computed(() => {
@@ -97,12 +326,65 @@ const worstPlacement = computed(() => {
   );
 });
 
+// --- Chart-Ausschnitt: standardmaessig nur die juengsten Events ---
+// `placements` ist chronologisch aufsteigend sortiert, die letzten Eintraege
+// sind also die aktuellsten. Der Regler erlaubt es, den Ausschnitt bis auf
+// alle teilgenommenen Events zu erweitern.
+const DEFAULT_CHART_POINTS = 6;
+const MIN_CHART_POINTS = 2;
+
+const chartPointCount = ref(DEFAULT_CHART_POINTS);
+
+const maxChartPoints = computed(() => placements.value.length);
+const canAdjustChartRange = computed(
+  () => maxChartPoints.value > MIN_CHART_POINTS,
+);
+
+// Beim Wechsel auf einen anderen Spieler (bzw. neuen Daten) wieder auf die
+// Standardanzahl zurueckfallen und auf die vorhandenen Events begrenzen.
+watch(
+  placements,
+  (entries) => {
+    chartPointCount.value = Math.min(
+      DEFAULT_CHART_POINTS,
+      Math.max(1, entries.length),
+    );
+  },
+  { immediate: true },
+);
+
+const visiblePlacements = computed<PlacementPoint[]>(() => {
+  const count = Math.min(
+    Math.max(1, chartPointCount.value),
+    placements.value.length,
+  );
+  return placements.value.slice(placements.value.length - count);
+});
+
+const visibleBestPlacement = computed(() => {
+  if (visiblePlacements.value.length === 0) return 0;
+  return visiblePlacements.value.reduce(
+    (best, entry) => Math.min(best, entry.placement),
+    Number.POSITIVE_INFINITY,
+  );
+});
+
+const visibleWorstPlacement = computed(() => {
+  if (visiblePlacements.value.length === 0) return 0;
+  return visiblePlacements.value.reduce(
+    (max, entry) => Math.max(max, entry.placement),
+    Number.NEGATIVE_INFINITY,
+  );
+});
+
 const chartData = computed<ChartData<"line">>(() => ({
-  labels: placements.value.map((e) => e.tournamentName || e.label || e.eventName),
+  labels: visiblePlacements.value.map(
+    (e) => e.tournamentName || e.label || e.eventName,
+  ),
   datasets: [
     {
       label: "Placement",
-      data: placements.value.map((e) => e.placement),
+      data: visiblePlacements.value.map((e) => e.placement),
       borderColor: "#89b4fa",
       backgroundColor: "rgba(137, 180, 250, 0.18)",
       pointBackgroundColor: "#cba6f7",
@@ -128,11 +410,11 @@ const chartOptions = computed<ChartOptions<"line">>(() => ({
       borderWidth: 1,
       callbacks: {
         title(items: TooltipItem<"line">[]) {
-          const item = placements.value[items[0]?.dataIndex ?? 0];
+          const item = visiblePlacements.value[items[0]?.dataIndex ?? 0];
           return item ? item.label : "";
         },
         label(context: TooltipItem<"line">) {
-          const item = placements.value[context.dataIndex];
+          const item = visiblePlacements.value[context.dataIndex];
           const placement = context.parsed.y ?? item?.placement ?? 0;
           const entrants = item?.numEntrants ? ` / ${item.numEntrants}` : "";
           return `Placement: ${placement}${entrants}`;
@@ -143,8 +425,8 @@ const chartOptions = computed<ChartOptions<"line">>(() => ({
   scales: {
     y: {
       reverse: true,
-      min: Math.max(0, bestPlacement.value - 1),
-      max: worstPlacement.value + 1,
+      min: Math.max(0, visibleBestPlacement.value - 1),
+      max: visibleWorstPlacement.value + 1,
       grid: { color: "rgba(108, 112, 134, 0.35)" },
       border: { color: "rgba(108, 112, 134, 0.5)" },
       ticks: { color: "#bac2de", precision: 0, stepSize: 1 },
@@ -223,8 +505,8 @@ const h2hPage = ref(1);
 
 const filteredOpponents = computed<H2hOpponent[]>(() => {
   const query = h2hQuery.value.trim().toLowerCase();
-  if (!query) return h2hOpponents.value;
-  return h2hOpponents.value.filter((opponent) =>
+  if (!query) return rangedH2h.value.opponents;
+  return rangedH2h.value.opponents.filter((opponent) =>
     opponent.displayName.toLowerCase().includes(query),
   );
 });
@@ -242,7 +524,8 @@ const h2hVisiblePages = computed(() =>
   buildVisiblePages(h2hPageCount.value, h2hPage.value),
 );
 
-watch(h2hQuery, () => {
+// Suche wie Zeitraum aendern die Trefferliste — beides springt auf Seite 1.
+watch([h2hQuery, h2hRange], () => {
   h2hPage.value = 1;
 });
 watch(h2hPageCount, (count) => {
@@ -267,8 +550,8 @@ function formatWinRate(value: number): string {
   <Head
     :title="
       player
-        ? `${player.displayName} · Turner Tuesdays`
-        : 'Teilnehmer · Turner Tuesdays'
+        ? `${player.displayName} · ${tenant.label}`
+        : `Teilnehmer · ${tenant.label}`
     "
   />
 
@@ -279,7 +562,7 @@ function formatWinRate(value: number): string {
           class="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
         >
           <div class="space-y-2">
-            <Link class="btn btn-ghost btn-sm -ml-3" href="/">
+            <Link class="btn btn-ghost btn-sm -ml-3" :href="url()">
               ← Zurück zur Übersicht
             </Link>
             <div>
@@ -287,7 +570,7 @@ function formatWinRate(value: number): string {
                 {{ player?.displayName ?? "Spieler" }}
               </h1>
               <p class="text-base-content/70">
-                Platzierungshistorie über Turner Tuesday Events.
+                Platzierungshistorie über Events der Reihe {{ tenant.label }}.
               </p>
             </div>
           </div>
@@ -326,11 +609,34 @@ function formatWinRate(value: number): string {
           </div>
 
           <div class="rounded-2xl bg-base-100">
-            <div class="mb-3 flex items-center justify-between gap-2">
+            <div
+              class="mb-3 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
+            >
               <h2 class="text-lg font-semibold">
                 Platzierungen über die Zeit
               </h2>
-              <span class="text-sm text-base-content/60">
+              <div
+                v-if="canAdjustChartRange"
+                class="flex w-full flex-col gap-1 sm:w-auto sm:items-end"
+              >
+                <label
+                  class="text-sm text-base-content/60"
+                  for="chart-range"
+                >
+                  Letzte {{ visiblePlacements.length }} von
+                  {{ placements.length }} Events
+                </label>
+                <input
+                  id="chart-range"
+                  v-model.number="chartPointCount"
+                  type="range"
+                  class="range range-primary range-xs w-full sm:w-56"
+                  :min="MIN_CHART_POINTS"
+                  :max="maxChartPoints"
+                  step="1"
+                />
+              </div>
+              <span v-else class="text-sm text-base-content/60">
                 {{ placements.length }} Events
               </span>
             </div>
@@ -370,9 +676,17 @@ function formatWinRate(value: number): string {
                 <tbody>
                   <tr v-for="entry in pagedPlacements" :key="entry.eventId">
                     <td>
+                      <span
+                        v-if="entry.placement === 1"
+                        class="mr-1 text-sm leading-none"
+                        title="Turniersieg"
+                        aria-label="Turniersieg"
+                      >
+                        👑
+                      </span>
                       <Link
                         class="link link-hover link-primary font-medium"
-                        :href="`/events/${entry.eventId}`"
+                        :href="url(`/events/${entry.eventId}`)"
                       >
                         {{ entry.tournamentName }}
                       </Link>
@@ -450,55 +764,115 @@ function formatWinRate(value: number): string {
           </div>
 
           <div class="rounded-2xl bg-base-100">
-            <div class="mb-3 flex items-center justify-between gap-2">
-              <h2 class="text-lg font-semibold">Meist gespielte Charaktere</h2>
-              <span class="text-sm text-base-content/60">
-                {{ totalCharacterSelections }} Games
-              </span>
+            <div class="mb-3 space-y-3">
+              <div class="flex items-center justify-between gap-2">
+                <h2 class="text-lg font-semibold">
+                  Meist gespielte Charaktere
+                </h2>
+                <span class="text-sm text-base-content/60">
+                  {{ rangedCharacters.total }} Games
+                </span>
+              </div>
+
+              <TimeRangeSlider
+                v-model="characterRange"
+                :labels="characterRangeLabels"
+              />
             </div>
-            <div
-              v-if="characterSelections.length > 0"
-              class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
-            >
-              <div
-                v-for="character in characterSelections"
-                :key="character.characterId"
-                class="rounded-xl bg-base-200 p-4"
-              >
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <div class="text-lg font-semibold">
-                      {{ character.characterName }}
-                    </div>
-                    <div class="text-sm text-base-content/60">
-                      {{ character.count }} mal gewählt
-                    </div>
-                  </div>
-                  <div class="badge badge-secondary badge-outline">
-                    {{ formatWinRate(character.percentage) }}%
+            <template v-if="lineup.length > 0">
+              <div class="character-stage rounded-xl bg-base-200">
+                <div class="character-row">
+                  <div
+                    v-for="(character, index) in lineup"
+                    :key="character.characterName"
+                    class="character-figure"
+                    :style="{
+                      '--scale': character.scale,
+                      '--offset': `${character.offset}px`,
+                      '--depth': character.depth,
+                      '--layer': lineup.length - index,
+                      '--box-x': character.box.x,
+                      '--box-y': character.box.y,
+                      '--box-width': character.box.width,
+                      '--box-height': character.box.height,
+                    }"
+                  >
+                    <span
+                      class="character-badge"
+                      :style="{
+                        background: character.style.background,
+                        color: character.style.color,
+                      }"
+                    >
+                      {{ formatWinRate(character.percentage) }}%
+                    </span>
+                    <img
+                      v-if="character.imageUrl"
+                      :src="character.imageUrl"
+                      class="character-render"
+                      :alt="character.characterName"
+                      :title="`${character.characterName} · ${character.count} mal gewählt`"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                    <span
+                      v-else
+                      class="character-render character-placeholder"
+                      :style="{ background: character.style.background }"
+                      :title="`${character.characterName} · ${character.count} mal gewählt`"
+                    ></span>
                   </div>
                 </div>
-                <progress
-                  class="progress progress-secondary mt-4 w-full"
-                  :value="character.percentage"
-                  max="100"
-                />
               </div>
-            </div>
+
+              <div class="mt-4 flex flex-wrap gap-2">
+                <span
+                  v-for="(character, index) in characterChips"
+                  :key="character.characterName"
+                  class="inline-flex items-center gap-2 rounded-full py-1 pl-1.5 pr-3 text-sm"
+                  :class="
+                    index === 0
+                      ? 'bg-secondary/10 ring-1 ring-secondary'
+                      : 'bg-base-200'
+                  "
+                >
+                  <img
+                    v-if="character.iconUrl"
+                    :src="character.iconUrl"
+                    class="h-5 w-5 shrink-0 object-contain"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <span class="font-semibold">{{ character.characterName }}</span>
+                  <span class="text-base-content/60">
+                    {{ character.count }}× · {{ formatWinRate(character.percentage) }}%
+                  </span>
+                </span>
+              </div>
+            </template>
             <div
               v-else
               class="rounded-xl border border-dashed border-base-300 p-6 text-sm text-base-content/60"
             >
-              Keine Charakterinformationen hinterlegt.
+              {{
+                characterRange === null
+                  ? "Keine Charakterinformationen hinterlegt."
+                  : "Im gewählten Zeitraum wurde kein Charakter gespielt."
+              }}
             </div>
           </div>
 
           <div class="rounded-2xl bg-base-100">
-            <div class="mb-3 flex items-center justify-between gap-2">
-              <h2 class="text-lg font-semibold">H2H</h2>
-              <span class="text-sm text-base-content/60">
-                {{ h2hSummary.wins }} - {{ h2hSummary.losses }}
-              </span>
+            <div class="mb-3 space-y-3">
+              <div class="flex items-center justify-between gap-2">
+                <h2 class="text-lg font-semibold">H2H</h2>
+                <span class="text-sm text-base-content/60">
+                  {{ rangedH2h.summary.wins }} - {{ rangedH2h.summary.losses }}
+                </span>
+              </div>
+
+              <TimeRangeSlider v-model="h2hRange" :labels="h2hRangeLabels" />
             </div>
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <div class="rounded-xl bg-base-200 p-4">
@@ -506,7 +880,7 @@ function formatWinRate(value: number): string {
                   Gewonnen
                 </div>
                 <div class="mt-1 text-xl font-semibold">
-                  {{ h2hSummary.wins }}
+                  {{ rangedH2h.summary.wins }}
                 </div>
               </div>
               <div class="rounded-xl bg-base-200 p-4">
@@ -514,7 +888,7 @@ function formatWinRate(value: number): string {
                   Verloren
                 </div>
                 <div class="mt-1 text-xl font-semibold">
-                  {{ h2hSummary.losses }}
+                  {{ rangedH2h.summary.losses }}
                 </div>
               </div>
               <div
@@ -526,9 +900,10 @@ function formatWinRate(value: number): string {
                 <div class="mt-1 text-xl font-semibold">
                   {{
                     formatWinRate(
-                      h2hSummary.wins + h2hSummary.losses > 0
-                        ? (h2hSummary.wins /
-                            (h2hSummary.wins + h2hSummary.losses)) *
+                      rangedH2h.summary.wins + rangedH2h.summary.losses > 0
+                        ? (rangedH2h.summary.wins /
+                            (rangedH2h.summary.wins +
+                              rangedH2h.summary.losses)) *
                             100
                         : 0,
                     )
@@ -536,7 +911,7 @@ function formatWinRate(value: number): string {
                 </div>
               </div>
             </div>
-            <div v-if="h2hOpponents.length > 0" class="mt-4">
+            <div v-if="rangedH2h.opponents.length > 0" class="mt-4">
               <label class="form-control mb-3 w-full sm:max-w-xs">
                 <input
                   v-model="h2hQuery"
@@ -568,7 +943,7 @@ function formatWinRate(value: number): string {
                       <td>
                         <Link
                           class="link link-hover link-primary break-words"
-                          :href="`/participants/${encodeURIComponent(opponent.playerId)}`"
+                          :href="url(`/participants/${encodeURIComponent(opponent.playerId)}`)"
                         >
                           {{ opponent.displayName }}
                         </Link>
@@ -640,7 +1015,11 @@ function formatWinRate(value: number): string {
               v-else
               class="mt-4 rounded-xl border border-dashed border-base-300 p-6 text-sm text-base-content/60"
             >
-              Noch keine H2H Daten verfügbar.
+              {{
+                h2hRange === null
+                  ? "Noch keine H2H Daten verfügbar."
+                  : "Im gewählten Zeitraum wurde kein Set gespielt."
+              }}
             </div>
           </div>
         </template>
@@ -648,3 +1027,137 @@ function formatWinRate(value: number): string {
     </section>
   </main>
 </template>
+
+<style scoped>
+/*
+ * Charakter-Lineup: die Figuren stehen auf einer gemeinsamen Linie am unteren
+ * Rand der Buehne und ueberlappen sich leicht. Alle Groessen leiten sich aus
+ * `--row-height` ab, damit die Reihe auf kleinen Displays einfach schrumpft.
+ *
+ * `--box-*` ist der sichtbare Bildinhalt des Renders (siehe
+ * CHARACTER_RENDER_BOXES). Das Bild wird so skaliert und verschoben, dass genau
+ * dieser Ausschnitt die Figur fuellt — sonst schwebt Jigglypuff ueber der Linie,
+ * waehrend Fox darauf steht.
+ */
+.character-stage {
+  --row-height: 210px;
+  position: relative;
+  height: calc(var(--row-height) + 52px);
+  overflow: hidden;
+}
+
+.character-row {
+  position: absolute;
+  inset: 0;
+  bottom: 26px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-inline: 12px;
+}
+
+.character-figure {
+  --image-height: calc(var(--scale) * var(--row-height) / var(--box-height));
+  --image-width: calc(var(--image-height) * 2 / 3);
+  --figure-width: calc(var(--image-width) * var(--box-width));
+  position: relative;
+  z-index: var(--layer);
+  flex: 0 0 auto;
+  width: var(--figure-width);
+  height: calc(var(--scale) * var(--row-height));
+  margin-left: calc(var(--figure-width) * -0.2);
+  transform: translateY(var(--offset));
+  transition: transform 150ms ease;
+}
+
+.character-figure:first-child {
+  margin-left: 0;
+}
+
+/* Schattenellipse am Boden, damit die Figur nicht in der Luft klebt. */
+.character-figure::before {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 12%;
+  right: 12%;
+  height: calc(var(--scale) * 14px);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.25);
+  filter: blur(5px);
+}
+
+.character-render {
+  position: absolute;
+  left: calc(var(--box-x) * var(--image-width) * -1);
+  bottom: calc((1 - var(--box-y) - var(--box-height)) * var(--image-height) * -1);
+  width: var(--image-width);
+  height: var(--image-height);
+  max-width: none;
+  object-fit: contain;
+  opacity: var(--depth);
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
+  transition: opacity 150ms ease;
+}
+
+/* Charakter ohne Render: eingefaerbte Saeule in der Charakterfarbe. */
+.character-placeholder {
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.character-badge {
+  position: absolute;
+  bottom: calc(100% - 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+/* Hover hebt einen Charakter aus der Reihe und dimmt die uebrigen. */
+.character-row:hover .character-render {
+  opacity: calc(var(--depth) * 0.7);
+}
+
+.character-figure:hover {
+  z-index: 60;
+  transform: translateY(calc(var(--offset) - 6px));
+}
+
+.character-figure:hover .character-render {
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .character-stage {
+    --row-height: 150px;
+  }
+
+  .character-figure {
+    margin-left: calc(var(--figure-width) * -0.24);
+  }
+}
+
+@media (max-width: 420px) {
+  .character-stage {
+    --row-height: 120px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .character-figure,
+  .character-render {
+    transition: none;
+  }
+}
+</style>

@@ -21,7 +21,8 @@ npm start          # Metro; i = iOS-Simulator, a = Android
 | `npm start` | Metro-Dev-Server |
 | `npm run go:ios` / `go:android` | Start in Expo Go — ohne native Toolchain |
 | `npm run ios` / `android` | Nativer Dev-Build (braucht CocoaPods bzw. Java + SDK) |
-| `npm run gen:api` | Typen aus `openapi/melee-v1.yaml` neu erzeugen |
+| `npm run gen:api` | Typen aus `openapi/melee-v2.yaml` neu erzeugen |
+| `npm run check` | Selbstprüfung der Zeitraum-Rechnung gegen die echte API |
 
 ## Builds
 
@@ -100,6 +101,7 @@ src/
   components/ui/     Ersatz für daisyUI (Card, Badge, Segmented, States)
   lib/api/           Client, React-Query-Hooks, generierte Typen
   lib/characters.ts  Character-Renders, Stock-Icons, Farben
+  lib/player-range.ts    Charakter- und H2H-Statistik über einen Zeitraum
   lib/ranked-day.ts  Die Fenster von Slippis Free Ranked Day
   lib/series.tsx     Die Turnier-Reihen und welche gerade gilt
   lib/theme.tsx      Hell/Dunkel/System und die Palette als Werte
@@ -285,7 +287,7 @@ nicht gibt:
 | Übersicht | `(tabs)/index` | Event-Auswahl mit Suche, Endplatzierungen, Ranking-Tabelle |
 | Power Ranking | `(tabs)/power-ranking` | Zeitraumwechsel, Legende, Spielerkarten mit Kostüm-Overrides |
 | Event-Detail | `(tabs)/events/[eventId]` | Turnierverlauf nach Bracket-Runden, Charakterwahl, Endplatzierungen |
-| Spieler-Detail | `(tabs)/players/[playerId]` | Platzierungsverlauf, Events, Charaktere, H2H |
+| Spieler-Detail | `(tabs)/players/[playerId]` | Platzierungsverlauf, Events, Charakter-Lineup, H2H — beide mit Zeitraum-Regler |
 | Einstellungen | `(tabs)/settings` | Darstellung (Hell/Dunkel/System), Ranked-Day-Erinnerung, Datenstand |
 
 Die Detail-Routen liegen bewusst **innerhalb** der Tab-Gruppe (mit
@@ -305,6 +307,51 @@ verweigert — sonst verspräche er etwas, das nicht kommt.
 `expo-notifications` ist eine native Abhängigkeit: nach dem Ziehen der Änderung
 einmal neu bauen (`npm run ios` bzw. `npm run android`), ein alter Build kennt
 das Modul nicht.
+
+### Spieler-Detail
+
+Drei Dinge trägt der Screen aus der Web-Ansicht mit, die über eine reine
+Tabelle hinausgehen:
+
+**Zeitraum-Regler.** Charaktere und H2H lassen sich auf einen Ausschnitt der
+Events eingrenzen. Die Zahlen dafür liegen schon in der Antwort:
+`characters.timeline` und `headToHead.timeline` führen je Event auf, was
+gespielt wurde — es braucht also keinen zweiten Abruf. Bei „Gesamt" bleibt das
+Aggregat des Servers stehen, jeder engere Ausschnitt wird in
+`src/lib/player-range.ts` aufsummiert.
+
+Dass beides dasselbe ergibt, ist die Stelle, an der eine Portierung leise
+auseinanderläuft — Sortierung und Rundung müssen dem Server folgen. `npm run
+check` prüft genau das: es holt den Spieler mit den meisten Teilnahmen von der
+API und rechnet dessen Timeline über den vollen Bereich nach; `characters.top`
+und `headToHead.opponents` müssen Eintrag für Eintrag herauskommen. Die Datei
+liegt als `*.check.ts` außerhalb der Typprüfung der App und läuft über Nodes
+`--experimental-strip-types`, damit sie ohne Testframework auskommt.
+
+Der Regler selbst (`src/components/ui/range-slider.tsx`) ist der Ersatz für
+zwei übereinanderliegende `input[type=range]` des Webs: ein `PanResponder` zieht
+den jeweils näheren Griff. Er arbeitet mit Indizes statt Datumswerten, so liegt
+jedes Event auf einer eigenen Raste und eine lange Turnierpause frisst keinen
+Reglerweg.
+
+**Charakter-Lineup.** Die fünf meistgespielten Charaktere stehen als Renders auf
+einer gemeinsamen Standlinie, in der Größe nach Anteil gestaffelt (Wurzel, nicht
+linear — sonst fiele ein Charakter mit 5 % auf ein Zwanzigstel zusammen). Damit
+sie wirklich auf der Linie stehen und nicht darüber schweben, trägt
+`CHARACTER_RENDER_BOXES` in `src/lib/characters.ts` für jeden Render den
+sichtbaren Bildausschnitt.
+
+Das Web schachtelt die Bilder dafür in Figuren-Boxen und lässt sie überlaufen.
+Nativ schneidet Android Kinder am Rand des Elternteils ab, deshalb rechnet
+`character-lineup.tsx` die Position jedes Bildes aus und legt es direkt in die
+Bühne. Die einzige weggelassene Zutat ist der weiche Schatten unter den Füßen —
+ohne `filter: blur()` wäre er ein harter Fleck.
+
+**Verlauf und Liste.** Der Verlauf zeigt die letzten sechs Events, umschaltbar
+auf zwölf oder alle; das Web hat dort einen Regler, hier sind es Vorgaben, weil
+ein Finger auf sechs Rasten ohnehin nicht trifft. Die Event-Tabelle sortiert
+das jüngste Turnier nach oben (die API liefert chronologisch) und setzt eine
+👑 vor jeden Turniersieg.
 
 ### Bracket-Gruppierung
 

@@ -46,6 +46,7 @@
     "android": "expo run:android",
     "web": "expo start --web",
     "lint": "expo lint",
+    "check": "node --experimental-strip-types src/lib/player-range.check.ts",
     "gen:api": "npx --yes openapi-typescript@7 openapi/melee-v2.yaml -o src/lib/api/schema.ts",
     "prebuild": "expo prebuild --clean",
     "build:ipa": "bash scripts/build-ipa.sh",

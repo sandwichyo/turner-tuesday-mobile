@@ -10,7 +10,8 @@ entfernt wurde und dies die einzige verbliebene Kopie ist.
 | --- | --- |
 | `EventDetailBuilder.php` | Die Bracket-Gruppierung (Winners/Losers-Paarung, Stage-Ranking, Pools). Muss nach TypeScript portiert werden — die API liefert unter `/api/v1/events/{id}` nur ein flaches `sets[]`. |
 | `EventsShow.vue` | Vorlage für den Event-Detail-Screen. |
-| `ParticipantsShow.vue` | Vorlage für den Spieler-Detail-Screen, inkl. Platzierungsverlauf (im Web chart.js). |
+| `ParticipantsShow.vue` | Vorlage für den Spieler-Detail-Screen, inkl. Platzierungsverlauf (im Web chart.js). Bereits portiert; die Kopie ist auf dem Stand der Kronendarstellung. |
+| `TimeRangeSlider.vue` | Der Zwei-Griff-Regler der Spieler-Detail-Seite. Portiert nach `src/components/ui/range-slider.tsx`. |
 | `Home.vue` | Vorlage für die Übersicht. Der Anmeldezähler ist portiert; woher die Zahl kommt, steht in `src/lib/api/upcoming.ts`. |
 | `PowerRanking.vue` | Bereits portiert nach `src/app/(tabs)/power-ranking.tsx`. |
 | `characters.ts` | Bereits portiert nach `src/lib/characters.ts` und `src/lib/player-images.ts`. |

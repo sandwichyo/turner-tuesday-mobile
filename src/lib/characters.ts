@@ -131,3 +131,53 @@ export function getStockIcon(name?: string | null): ImageSourcePropType | null {
 export function getCharacterStyle(name?: string | null): { background: string; color: string } {
   return lookup(CHARACTER_STYLES, name) ?? FALLBACK_STYLE;
 }
+
+/**
+ * Der sichtbare Bildinhalt jedes Renders als Anteil der Bilddatei — portiert aus
+ * CHARACTER_RENDER_BOXES des Web-Frontends, dort nach Dateinamen abgelegt, hier
+ * nach Charakternamen, weil die Map darüber geht.
+ *
+ * Gebraucht wird das vom Charakter-Lineup: ohne den Ausschnitt schwebt
+ * Jigglypuff über der Standlinie, während Fox darauf steht.
+ */
+export type CharacterRenderBox = { x: number; y: number; width: number; height: number };
+
+export const CHARACTER_RENDER_BOXES: Record<string, CharacterRenderBox> = {
+  Fox: { x: 0.095, y: 0.0087, width: 0.758, height: 0.9833 },
+  Falco: { x: 0.111, y: 0.0053, width: 0.83, height: 0.9827 },
+  Marth: { x: 0.01, y: 0.0687, width: 0.979, height: 0.866 },
+  Sheik: { x: 0.046, y: 0.0053, width: 0.82, height: 0.9833 },
+  Zelda: { x: 0.046, y: 0.0053, width: 0.82, height: 0.9833 },
+  "Sheik/Zelda": { x: 0.046, y: 0.0053, width: 0.82, height: 0.9833 },
+  "Sheik / Zelda": { x: 0.046, y: 0.0053, width: 0.82, height: 0.9833 },
+  "Zelda/Sheik": { x: 0.046, y: 0.0053, width: 0.82, height: 0.9833 },
+  "Zelda / Sheik": { x: 0.046, y: 0.0053, width: 0.82, height: 0.9833 },
+  Jigglypuff: { x: 0.146, y: 0.224, width: 0.75, height: 0.5487 },
+  "Captain Falcon": { x: 0.093, y: 0.0087, width: 0.902, height: 0.984 },
+  Peach: { x: 0.023, y: 0.0327, width: 0.959, height: 0.9293 },
+  "Ice Climbers": { x: 0.007, y: 0.0947, width: 0.979, height: 0.8027 },
+  Samus: { x: 0.057, y: 0.04, width: 0.893, height: 0.9073 },
+  "Young Link": { x: 0.127, y: 0.0113, width: 0.756, height: 0.9787 },
+  Link: { x: 0.02, y: 0.1107, width: 0.959, height: 0.792 },
+  Pikachu: { x: 0.009, y: 0.268, width: 0.982, height: 0.4947 },
+  Luigi: { x: 0.013, y: 0.0147, width: 0.971, height: 0.9707 },
+  Mario: { x: 0.089, y: 0.008, width: 0.88, height: 0.9853 },
+  "Dr. Mario": { x: 0.135, y: 0.006, width: 0.728, height: 0.9873 },
+  Yoshi: { x: 0.025, y: 0.0513, width: 0.963, height: 0.8893 },
+  Ganondorf: { x: 0.015, y: 0.036, width: 0.976, height: 0.9467 },
+  Mewtwo: { x: 0.016, y: 0.0673, width: 0.966, height: 0.8747 },
+  Roy: { x: 0.03, y: 0.004, width: 0.934, height: 0.99 },
+  "Mr. Game & Watch": { x: 0.009, y: 0.134, width: 0.982, height: 0.7273 },
+  Ness: { x: 0.016, y: 0.0653, width: 0.967, height: 0.8693 },
+  Kirby: { x: 0.063, y: 0.22, width: 0.925, height: 0.6033 },
+  Pichu: { x: 0.004, y: 0.1187, width: 0.908, height: 0.752 },
+  "Donkey Kong": { x: 0.008, y: 0.1387, width: 0.983, height: 0.702 },
+  Bowser: { x: 0.008, y: 0.1267, width: 0.983, height: 0.7527 },
+};
+
+/** Ohne Eintrag gilt das ganze Bild als Inhalt. */
+const FALLBACK_RENDER_BOX: CharacterRenderBox = { x: 0, y: 0, width: 1, height: 1 };
+
+export function getCharacterRenderBox(name?: string | null): CharacterRenderBox {
+  return lookup(CHARACTER_RENDER_BOXES, name) ?? FALLBACK_RENDER_BOX;
+}
