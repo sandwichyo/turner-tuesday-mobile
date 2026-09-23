@@ -1,4 +1,4 @@
-# Turner Tuesdays — Mobile
+# Melee im Norden — Mobile
 
 React-Native-App (Expo SDK 57) für die Turner-Tuesday-Serie. Die Daten kommen
 aus der öffentlichen, versionierten API von `melee.sandwichyo.com` — bis auf
@@ -28,8 +28,8 @@ npm start          # Metro; i = iOS-Simulator, a = Android
 
 ```bash
 npm run build:doctor          # sagt, was fehlt — und mit welchem Befehl
-npm run build:ipa [--clean]   # → build/TurnerTuesdays-1.0.0.ipa
-npm run build:apk [--clean]   # → build/TurnerTuesdays-1.0.0.apk
+npm run build:ipa [--clean]   # → build/MeleeimNorden-1.0.0.ipa
+npm run build:apk [--clean]   # → build/MeleeimNorden-1.0.0.apk
 npm run build:apk:cloud       # APK über EAS, ohne lokale Android-Toolchain
 ```
 

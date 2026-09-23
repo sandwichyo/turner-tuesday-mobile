@@ -4,10 +4,12 @@ Hier landen die fertigen Installationspakete:
 
 | Datei | Erzeugt mit |
 | --- | --- |
-| `TurnerTuesdays-<version>.ipa` | `npm run build:ipa` |
-| `TurnerTuesdays-<version>.apk` | `npm run build:apk` |
+| `MeleeimNorden-<version>.ipa` | `npm run build:ipa` |
+| `MeleeimNorden-<version>.apk` | `npm run build:apk` |
 
-Die Versionsnummer kommt aus `app.json` (`expo.version`).
+Der Dateiname ist `expo.name` ohne Leer- und Sonderzeichen, die
+Versionsnummer kommt aus `app.json` (`expo.version`) — beides lesen die
+Build-Skripte von dort.
 
 Die Artefakte selbst sind nicht versioniert — nur dieser Ordner und diese
 Datei. Zwischenmaterial (Xcode-Archiv, `Payload/`) liegt während des Builds

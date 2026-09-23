@@ -21,6 +21,9 @@ import { Hero } from "@/components/ui/hero";
 import { Segmented } from "@/components/ui/segmented";
 import { StatTile } from "@/components/ui/stat-tile";
 
+/** Der Name, unter dem die App im System steht — aus app.json, nicht doppelt. */
+const APP_NAME = Constants.expoConfig?.name ?? "Melee im Norden";
+
 const THEMES: { key: ThemePreference; label: string }[] = [
   { key: "system", label: "System" },
   { key: "light", label: "Hell" },
@@ -101,7 +104,7 @@ function Reminders() {
         {denied ? (
           <View className="gap-3 rounded-xl bg-base-200 p-4">
             <Text className="text-sm text-base-muted">
-              Das System lässt keine Nachrichten zu. Erlaube sie für Turner Tuesdays, dann
+              Das System lässt keine Nachrichten zu. Erlaube sie für {APP_NAME}, dann
               greift der Schalter.
             </Text>
             <Button
