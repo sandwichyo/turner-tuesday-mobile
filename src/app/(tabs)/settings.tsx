@@ -21,8 +21,6 @@ import { Hero } from "@/components/ui/hero";
 import { Segmented } from "@/components/ui/segmented";
 import { StatTile } from "@/components/ui/stat-tile";
 
-const STARTGG_URL = "https://start.gg/whv";
-
 const THEMES: { key: ThemePreference; label: string }[] = [
   { key: "system", label: "System" },
   { key: "light", label: "Hell" },
@@ -146,10 +144,9 @@ function About() {
 }
 
 export default function SettingsScreen() {
-  const openStartGg = () => Linking.openURL(STARTGG_URL);
 
   return (
-    <Screen onOpenStartGg={openStartGg}>
+    <Screen>
       <ScrollView contentContainerClassName="gap-4 p-4">
         <Hero title="Einstellungen" subtitle="Darstellung und Erinnerungen" />
 

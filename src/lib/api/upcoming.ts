@@ -1,14 +1,15 @@
 /**
- * Der Anmeldestand des nächsten Turner Tuesday.
+ * Der Anmeldestand des nächsten Turniers einer Reihe.
  *
  * **Diese Zahl steht in keiner API-Version.** Die Event-Liste einer Reihe führt
  * nur importierte, bereits gespielte Events; ein Turnier taucht dort erst auf,
  * wenn es Ergebnisse hat. Die laufenden Anmeldungen liegen live bei start.gg
  * und werden serverseitig vom Web-Frontend geholt (UpcomingEventProvider).
  *
- * Hier wird genau dort angezapft: ein GET auf „/" mit dem Header
- * `X-Inertia: true` liefert statt der HTML-Seite deren Props als JSON, darin
- * `upcomingEvent` in der Form, die reference/Home.vue beschreibt.
+ * Hier wird genau dort angezapft: ein GET auf die Startseite der Reihe
+ * (`/turner-tuesday` und so fort) mit dem Header `X-Inertia: true` liefert
+ * statt der HTML-Seite deren Props als JSON, darin `upcomingEvent` in der
+ * Form, die reference/Home.vue beschreibt.
  *
  * Das ist **kein zugesicherter Vertrag** — anders als /api/v2 darf sich das
  * jederzeit ändern, und mit der Abschaltung des alten Web-Frontends fällt es
@@ -67,7 +68,7 @@ function parse(raw: unknown): UpcomingEvent | null {
   if (eventId === null || numEntrants === null) return null;
 
   const name = asText(value.name) ?? "Melee 1VS1";
-  const tournamentName = asText(value.tournamentName) ?? "Turner Tuesday";
+  const tournamentName = asText(value.tournamentName) ?? name;
   const startAtSeconds = asNumber(value.startAt);
 
   return {
@@ -88,11 +89,12 @@ function parse(raw: unknown): UpcomingEvent | null {
  * React Query ihn wiederholen kann.
  */
 export async function fetchUpcomingEvent(
+  websitePath: string,
   options: { signal?: AbortSignal } = {},
 ): Promise<UpcomingEvent | null> {
   let response: Response;
   try {
-    response = await fetch(new URL("/", API_BASE_URL).toString(), {
+    response = await fetch(new URL(websitePath, API_BASE_URL).toString(), {
       headers: {
         Accept: "application/json",
         "X-Inertia": "true",

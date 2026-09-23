@@ -5,7 +5,7 @@
 import { Image } from "expo-image";
 import { Text, View } from "react-native";
 
-const LOGO = require("../../../assets/brand/logo.png");
+import { useSeries } from "@/lib/series";
 
 export function Hero({
   title,
@@ -16,10 +16,12 @@ export function Hero({
   subtitle?: string;
   action?: React.ReactNode;
 }) {
+  const { series } = useSeries();
+
   return (
     <View className="gap-4 rounded-2xl bg-base-100 p-5 shadow-lg shadow-black/30">
       <View className="flex-row items-center gap-4">
-        <Image source={LOGO} style={{ width: 56, height: 56, borderRadius: 12 }} />
+        <Image source={series.logo} style={{ width: 56, height: 56, borderRadius: 12 }} />
         <View className="flex-1">
           <Text className="text-3xl font-bold text-base-content">{title}</Text>
           {subtitle ? <Text className="text-base-muted">{subtitle}</Text> : null}

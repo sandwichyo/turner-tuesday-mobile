@@ -8,12 +8,13 @@
  */
 import { Image } from "expo-image";
 import { useMemo, useState } from "react";
-import { FlatList, Linking, Pressable, Text, View } from "react-native";
+import { FlatList, Pressable, Text, View } from "react-native";
 
 import { router } from "expo-router";
 
 import { usePowerRanking } from "@/lib/api/queries";
 import type { PowerRankingRow, PowerRankingSection } from "@/lib/api/types";
+import { useSeries } from "@/lib/series";
 import { getCharacterStyle } from "@/lib/characters";
 import { getPlayerImage } from "@/lib/player-images";
 import { Screen } from "@/components/screen";
@@ -23,8 +24,6 @@ import { TabBarSpacer } from "@/components/ui/floating-tab-bar";
 import { Hero } from "@/components/ui/hero";
 import { Segmented } from "@/components/ui/segmented";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/states";
-
-const STARTGG_URL = "https://start.gg/whv";
 
 /** "Gesamt" plus die Halbjahre — dieselbe Reihenfolge wie im Web. */
 type Period = PowerRankingSection & { key: string; label: string };
@@ -162,7 +161,7 @@ export default function PowerRankingScreen() {
   const [periodKey, setPeriodKey] = useState<string>(currentHalfYearKey());
 
   const { data, isPending, error, refetch, isRefetching } = usePowerRanking();
-  const openStartGg = () => Linking.openURL(STARTGG_URL);
+  const { series } = useSeries();
 
   const periods = useMemo<Period[]>(() => {
     if (!data) return [];
@@ -208,7 +207,7 @@ export default function PowerRankingScreen() {
 
   if (isPending) {
     return (
-      <Screen onOpenStartGg={openStartGg}>
+      <Screen>
         <LoadingState label="Power Ranking wird geladen …" />
       </Screen>
     );
@@ -216,7 +215,7 @@ export default function PowerRankingScreen() {
 
   if (error) {
     return (
-      <Screen onOpenStartGg={openStartGg}>
+      <Screen>
         <ErrorState message={error.message} onRetry={() => refetch()} />
       </Screen>
     );
@@ -225,7 +224,7 @@ export default function PowerRankingScreen() {
   const rows = activePeriod?.rows ?? [];
 
   return (
-    <Screen onOpenStartGg={openStartGg}>
+    <Screen>
       <FlatList
         data={rows}
         keyExtractor={(row) => row.playerId ?? String(row.rank)}
@@ -236,7 +235,7 @@ export default function PowerRankingScreen() {
         ListHeaderComponent={
           <View className="-mx-4 gap-3 pb-4">
             <View className="px-4">
-              <Hero title="Power Ranking" subtitle="Turner Tuesday Series" />
+              <Hero title="Power Ranking" subtitle={series.subtitle} />
             </View>
 
             {periods.length > 1 ? (

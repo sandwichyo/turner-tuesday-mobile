@@ -16,6 +16,7 @@ import { router } from "expo-router";
 
 import { useEvent, useEvents, useQuarterlyRanking, useScopes } from "@/lib/api/queries";
 import type { QuarterlyRankingSection, RankingScope } from "@/lib/api/types";
+import { useSeries } from "@/lib/series";
 import { Screen } from "@/components/screen";
 import { StartGgLogo } from "@/components/startgg-logo";
 import { Badge } from "@/components/ui/badge";
@@ -30,8 +31,6 @@ import { SignupCounter } from "@/components/ui/signup-counter";
 import { StatTile } from "@/components/ui/stat-tile";
 import { Table, TableCell, TableRow, rankIcon } from "@/components/ui/table";
 import { ErrorState, LoadingState } from "@/components/ui/states";
-
-const STARTGG_URL = "https://start.gg/whv";
 
 function formatDate(iso?: string | null): string {
   if (!iso) return "n/a";
@@ -271,13 +270,15 @@ function RankingCard() {
 }
 
 export default function OverviewScreen() {
-  const openStartGg = () => Linking.openURL(STARTGG_URL);
+  // Die Überschrift ist der Name der Reihe, wie im Web — mit dem Umschalter
+  // wäre „Turner Overview" über der GeMaOn-Tabelle schlicht falsch.
+  const { series } = useSeries();
 
   return (
-    <Screen onOpenStartGg={openStartGg}>
+    <Screen>
       <ScrollView contentContainerClassName="gap-4 p-4">
         <Hero
-          title="Turner Overview"
+          title={series.label}
           action={
             /*
               Der Anmeldestand steht direkt am Aufruf, wie im Web: die Zahl ist
@@ -289,15 +290,21 @@ export default function OverviewScreen() {
               <Button
                 label="Jetzt teilnehmen"
                 variant="startgg"
-                onPress={openStartGg}
+                onPress={() => Linking.openURL(series.startggUrl)}
                 icon={<StartGgLogo size={18} />}
               />
             </View>
           }
         />
 
-        <EventPicker />
-        <RankingCard />
+        {/*
+          Beide hängen an `useState`, das ein Event bzw. einen Bereich der
+          vorigen Reihe festhielte: eine Event-Id gibt es dort nicht mehr, und
+          „6+ Teilnehmer" führt nicht jede Reihe. Der Schlüssel setzt sie beim
+          Wechsel zurück, statt in jedem Zustand einzeln nachzuräumen.
+        */}
+        <EventPicker key={series.slug} />
+        <RankingCard key={series.slug} />
 
         <TabBarSpacer />
       </ScrollView>

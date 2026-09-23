@@ -101,9 +101,11 @@ src/
   lib/api/           Client, React-Query-Hooks, generierte Typen
   lib/characters.ts  Character-Renders, Stock-Icons, Farben
   lib/ranked-day.ts  Die Fenster von Slippis Free Ranked Day
+  lib/series.tsx     Die Turnier-Reihen und welche gerade gilt
   lib/theme.tsx      Hell/Dunkel/System und die Palette als Werte
   lib/notifications.tsx  Die lokalen Erinnerungen an den Ranked Day
 assets/characters/   35 Renders + 26 Stock-Icons, gebündelt
+assets/tenants/      Logo und Hintergrund je Reihe
 openapi/             Die Spec, aus der src/lib/api/schema.ts entsteht
 reference/           Vorlagen aus dem abgelösten Web-Frontend
 ```
@@ -111,10 +113,10 @@ reference/           Vorlagen aus dem abgelösten Web-Frontend
 ### API-Anbindung
 
 Die App legt sich auf **v2** fest. In v2 hängt jede Datenressource unter einer
-Turnierreihe (`/api/v2/series/{series}/…`); die Reihe steht als `SERIES` in
-`src/lib/api/client.ts` und ist hier fest `turner-tuesday`. Nur `/api/v2/meta`
-und `/api/v2/ranked-day` liegen daneben — das Ranked-Day-Fenster gilt für alle
-Reihen gleich.
+Turnier-Reihe (`/api/v2/series/{series}/…`), deshalb tragen die Pfad-Helfer in
+`src/lib/api/client.ts` den Slug als ersten Parameter; welcher es ist, sagt
+`useSeries()` (siehe unten). Nur `/api/v2/meta` und `/api/v2/ranked-day` liegen
+daneben — das Ranked-Day-Fenster gilt für alle Reihen gleich.
 
 Zwei Dinge sind gegenüber v1 nicht bloß umbenannt: die beiden Ranglisten haben
 verschiedene Formen und deshalb je einen eigenen Pfad statt `rankings/{type}`,
@@ -133,6 +135,33 @@ eingepackt) und die ETag-Validatoren — abgelegte ETags gehen als
 
 Die Basis-URL steht in `app.json` unter `extra.apiBaseUrl` und lässt sich beim
 Build über `API_BASE_URL` überschreiben.
+
+### Turnier-Reihen
+
+Das Logo in der Navbar ist zugleich der Umschalter zwischen den Reihen, wie im
+Web (`frontend/src/layouts/Default.vue`). Ein Wechsel führt zurück auf die
+Übersicht: Event- und Spieler-Detail hängen an Ids der vorigen Reihe, die es in
+der neuen nicht gibt.
+
+Im Web steckt die Reihe im Pfad und kommt mit jeder Seite vom Server. Hier gibt
+es keinen Pfad, also gehört sie in den Zustand — `src/lib/series.tsx` hält sie,
+legt sie in AsyncStorage ab und gibt sie über `useSeries()` weiter. Der Slug
+steckt zusätzlich in **jedem** Query-Key, sonst zeigte die neue Reihe für einen
+Moment die Tabelle der vorigen.
+
+Der Katalog steht in dieser Datei und kommt **nicht** aus `/api/v2/series`. Die
+Bilder liegen im Bundle und nicht auf dem Host, eine Reihe ohne sie wäre also
+ohnehin nur halb da — und auf der Gegenseite ist die Liste genauso fest
+verdrahtet: `App\Tenant\Tenant` ist ein PHP-Enum und ändert sich nur mit einem
+Deploy. Eine neue Reihe = ein Eintrag in `SERIES` plus Logo und Hintergrund
+unter `assets/tenants/` (aus `backend/public/tenants/` von MeleeImNorden). Die
+Feldnamen sind die des `Series`-Schemas der API, damit ein späterer Umstieg auf
+den Endpunkt diese eine Datei kostet.
+
+Was die Reihen unterscheidet, ist mehr als das Bild: `turner-tuesday` führt eine
+eigene „6+ Teilnehmer"-Tabelle, die anderen nicht. Genau deshalb liest die
+Übersicht den Vorgabe-Bereich aus dem Ranglisten-Katalog, statt `qualified`
+anzunehmen — sonst wäre der Wechsel zu GeMaOn ein 404.
 
 ### Power Ranking v2
 
@@ -155,8 +184,9 @@ ausschließlich importierte, gespielte Events — ein Turnier taucht dort erst a
 wenn es Ergebnisse hat. Die laufenden Anmeldungen liegen live bei start.gg.
 
 `src/lib/api/upcoming.ts` holt sie deshalb dort, wo das Web-Frontend sie schon
-serverseitig zusammenträgt: ein `GET /` mit dem Header `X-Inertia: true` liefert
-statt der HTML-Seite deren Props als JSON, darin `upcomingEvent`. Kein Token,
+serverseitig zusammenträgt: ein `GET` auf die Startseite der Reihe
+(`/turner-tuesday` und so fort) mit dem Header `X-Inertia: true` liefert statt
+der HTML-Seite deren Props als JSON, darin `upcomingEvent`. Kein Token,
 keine zweite Abhängigkeit — aber auch **kein zugesicherter Vertrag**: das darf
 sich jederzeit ändern und fällt mit dem alten Web-Frontend ganz weg.
 
@@ -183,6 +213,32 @@ Abweichung mitgerechnet wird. Darunter bliebe nur das Rauschen aus Laufzeit und
 Sekundenauflösung, und ein bei jedem Abruf springender Countdown wäre schlechter
 als eine um zwei Sekunden danebenliegende Anzeige.
 
+### App-Icon
+
+Die Vorlage liegt als `docs/melee-im-norden.jpg` (1024²) im Repo: ein Leuchtturm
+unter Nordlicht im Smash-Emblem, gerendert als Attrappe auf einer Wand. Die
+Icons sind daraus zugeschnitten, der gezeichnete Rahmen der Attrappe bleibt
+draußen — iOS und Android legen ihre eigene Maske darüber, und ein zweiter
+Rahmen darin ist der klassische Doppelrand.
+
+| Datei | Ausschnitt der Vorlage | Größe |
+| --- | --- | --- |
+| `assets/images/icon.png` | 192–832, randlos | 1024² |
+| `assets/images/favicon.png` | derselbe | 48² |
+| `assets/images/android-icon-foreground.png` | 140–884, auf 470 px in der Mitte | 512² |
+| `assets/images/android-icon-background.png` | einfarbig `#112540` | 512² |
+
+Der Vordergrund ist der weitere Ausschnitt, weil Android nur die mittleren
+66,7 % zeigt: der Ring muss vollständig in diese Zone passen, der Rest ist
+Anschnitt. `#112540` ist der Randton des Sternenhimmels, damit die Fläche
+hinter dem Anschnitt nicht abreißt.
+
+Kein `monochromeImage`: ein Schwellwert über die Vorlage macht aus Sternen und
+Nordlicht Rauschen statt einer Silhouette, und der untere Teil des Rings ist zu
+dunkel, um stehen zu bleiben. Ohne den Schlüssel zeigt Android im
+Themed-Icon-Modus das normale adaptive Icon. Für ein echtes gäbe es nur eine
+flache Zeichnung des Rings.
+
 ### Styling
 
 NativeWind 4 mit Tailwind 3.4, wie im Web. **daisyUI läuft hier nicht** — es ist
@@ -208,8 +264,9 @@ sich zur Laufzeit nicht übersteuern — **nach einer Änderung daran muss
 `expo prebuild` laufen**, sonst steht in der `Info.plist` weiter das alte).
 
 Den Rahmen des Web-Layouts stellt `src/components/screen.tsx`: `bg-base-200`,
-darüber das Turnier-Hintergrundbild (20 % Deckkraft im Dunkeln, 10 % im Hellen),
-darauf die Navbar mit Logo und start.gg-Verweis. Die Bottom-Navigation ersetzt
+darüber das Hintergrundbild der aktiven Reihe (20 % Deckkraft im Dunkeln, 10 %
+im Hellen), darauf die Navbar mit dem Reihen-Umschalter und dem
+start.gg-Verweis. Die Bottom-Navigation ersetzt
 die Seitenlinks der Navbar: `src/components/ui/floating-tab-bar.tsx` zeichnet sie
 als schwebende Kapsel im Stil von iOS 26 — Liquid Glass, wo es das gibt, sonst
 eine gedeckte Fläche. Beschriftet ist nur der aktive Tab, damit drei Einträge
@@ -225,7 +282,7 @@ nicht gibt:
 
 | Screen | Route | Inhalt |
 | --- | --- | --- |
-| Turner Overview | `(tabs)/index` | Event-Auswahl mit Suche, Endplatzierungen, Ranking-Tabelle |
+| Übersicht | `(tabs)/index` | Event-Auswahl mit Suche, Endplatzierungen, Ranking-Tabelle |
 | Power Ranking | `(tabs)/power-ranking` | Zeitraumwechsel, Legende, Spielerkarten mit Kostüm-Overrides |
 | Event-Detail | `(tabs)/events/[eventId]` | Turnierverlauf nach Bracket-Runden, Charakterwahl, Endplatzierungen |
 | Spieler-Detail | `(tabs)/players/[playerId]` | Platzierungsverlauf, Events, Charaktere, H2H |
@@ -271,5 +328,5 @@ Offen:
 - **Turniersiege und Eventgewichte** — v2 liefert beides (`tournamentWins` je
   Zeile, `events[]` je Abschnitt), die Karten zeigen es noch nicht. Im Web sind
   das die Krone und die Tabelle „Eventgewichte".
-- **Weitere Reihen** — v2 könnte über `/api/v2/series` mehrere anbieten; die App
-  bleibt bei `turner-tuesday`.
+- **Neue Reihen ohne App-Update** — der Katalog steht im Code, weil die Bilder
+  im Bundle liegen. Eine fünfte Reihe braucht eine neue Version.

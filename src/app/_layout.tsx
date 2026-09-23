@@ -10,6 +10,7 @@ import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 
 import { NotificationsProvider, RankedDayReminders } from "@/lib/notifications";
+import { SeriesProvider } from "@/lib/series";
 import { ThemeProvider, useScheme } from "@/lib/theme";
 
 import "../global.css";
@@ -60,11 +61,14 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <NotificationsProvider>
-          <App />
-        </NotificationsProvider>
-      </QueryClientProvider>
+      {/* Über dem Query-Client: der Slug der Reihe steckt in jedem Query-Key. */}
+      <SeriesProvider>
+        <QueryClientProvider client={queryClient}>
+          <NotificationsProvider>
+            <App />
+          </NotificationsProvider>
+        </QueryClientProvider>
+      </SeriesProvider>
     </ThemeProvider>
   );
 }

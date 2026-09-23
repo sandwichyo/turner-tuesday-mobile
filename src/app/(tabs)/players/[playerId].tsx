@@ -6,9 +6,10 @@
  */
 import { useLocalSearchParams, router } from "expo-router";
 import { useMemo, useState } from "react";
-import { Linking, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 import { usePlayer } from "@/lib/api/queries";
+import { useSeries } from "@/lib/series";
 import { useThemeColors } from "@/lib/theme";
 import { Screen } from "@/components/screen";
 import { Card, CardBody } from "@/components/ui/card";
@@ -18,8 +19,6 @@ import { PlacementChart } from "@/components/ui/placement-chart";
 import { StatTile } from "@/components/ui/stat-tile";
 import { Table, TableCell, TableRow } from "@/components/ui/table";
 import { ErrorState, LoadingState } from "@/components/ui/states";
-
-const STARTGG_URL = "https://start.gg/whv";
 
 function formatDate(iso?: string | null): string {
   if (!iso) return "";
@@ -43,12 +42,12 @@ export default function PlayerDetailScreen() {
   const colors = useThemeColors();
   const { playerId } = useLocalSearchParams<{ playerId: string }>();
   const { data, isPending, error, refetch } = usePlayer(playerId);
+  const { series } = useSeries();
 
   const [placementQuery, setPlacementQuery] = useState("");
   const [placementPage, setPlacementPage] = useState(1);
   const [opponentQuery, setOpponentQuery] = useState("");
 
-  const openStartGg = () => Linking.openURL(STARTGG_URL);
 
   const placements = data?.placements ?? [];
   const opponents = data?.headToHead?.opponents ?? [];
@@ -78,7 +77,7 @@ export default function PlayerDetailScreen() {
 
   if (isPending) {
     return (
-      <Screen onOpenStartGg={openStartGg}>
+      <Screen>
         <LoadingState label="Spieler wird geladen …" />
       </Screen>
     );
@@ -86,7 +85,7 @@ export default function PlayerDetailScreen() {
 
   if (error) {
     return (
-      <Screen onOpenStartGg={openStartGg}>
+      <Screen>
         <ErrorState message={error.message} onRetry={() => refetch()} />
       </Screen>
     );
@@ -100,7 +99,7 @@ export default function PlayerDetailScreen() {
   );
 
   return (
-    <Screen onOpenStartGg={openStartGg}>
+    <Screen>
       <ScrollView contentContainerClassName="gap-4 p-4">
         <Card>
           <CardBody className="gap-4">
@@ -113,7 +112,7 @@ export default function PlayerDetailScreen() {
                 {data?.displayName ?? "Spieler"}
               </Text>
               <Text className="text-base-muted">
-                Platzierungshistorie über Turner Tuesday Events.
+                Platzierungshistorie über {series.label}-Events.
               </Text>
             </View>
 

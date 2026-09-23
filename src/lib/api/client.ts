@@ -24,12 +24,6 @@ export const API_BASE_URL: string =
 /** Die Version, auf die sich diese App festlegt. Siehe /api/versions. */
 export const API_VERSION = "v2";
 
-/**
- * Die Turnierreihe, auf die diese App zugeschnitten ist. In v2 hängt jede
- * Datenressource unter einer Reihe — v1 kannte nur diese eine.
- */
-export const SERIES = "turner-tuesday";
-
 const CACHE_PREFIX = "api-cache:";
 
 /**
@@ -135,22 +129,28 @@ export async function apiGet<T>(
   return JSON.parse(body) as Envelope<T>;
 }
 
-/** Pfad-Helfer, damit Versionsvorsilbe und Reihe an genau einer Stelle stehen. */
-const SERIES_BASE = `/api/${API_VERSION}/series/${SERIES}`;
+/**
+ * Pfad-Helfer, damit die Versionsvorsilbe an genau einer Stelle steht.
+ *
+ * In v2 hängt jede Datenressource unter einer Turnier-Reihe, deshalb tragen
+ * diese Helfer den Slug als ersten Parameter. Welcher es ist, weiß lib/series;
+ * der Client bleibt davon unabhängig.
+ */
+const seriesBase = (series: string) => `/api/${API_VERSION}/series/${series}`;
 
 export const endpoints = {
   versions: () => "/api/versions",
   meta: () => `/api/${API_VERSION}/meta`,
-  events: () => `${SERIES_BASE}/events`,
-  event: (eventId: number) => `${SERIES_BASE}/events/${eventId}`,
-  rankings: () => `${SERIES_BASE}/rankings`,
+  events: (series: string) => `${seriesBase(series)}/events`,
+  event: (series: string, eventId: number) => `${seriesBase(series)}/events/${eventId}`,
+  rankings: (series: string) => `${seriesBase(series)}/rankings`,
   // Die beiden Tabellen haben in v2 verschiedene Formen und deshalb je einen
   // eigenen Pfad statt eines `{type}`-Platzhalters.
-  quarterlyRanking: () => `${SERIES_BASE}/rankings/quarterly`,
-  powerRanking: () => `${SERIES_BASE}/rankings/power`,
-  players: () => `${SERIES_BASE}/players`,
-  player: (playerId: string) =>
-    `${SERIES_BASE}/players/${encodeURIComponent(playerId)}`,
+  quarterlyRanking: (series: string) => `${seriesBase(series)}/rankings/quarterly`,
+  powerRanking: (series: string) => `${seriesBase(series)}/rankings/power`,
+  players: (series: string) => `${seriesBase(series)}/players`,
+  player: (series: string, playerId: string) =>
+    `${seriesBase(series)}/players/${encodeURIComponent(playerId)}`,
   // Das Ranked-Day-Fenster ist für alle Reihen dasselbe und hängt deshalb nicht
   // unter einer.
   rankedDay: () => `/api/${API_VERSION}/ranked-day`,

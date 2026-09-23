@@ -4,6 +4,8 @@
  */
 import { useQuery } from "@tanstack/react-query";
 
+import { useSeries } from "@/lib/series";
+
 import { ApiError, apiGet, endpoints } from "./client";
 import { fetchUpcomingEvent, type UpcomingEvent } from "./upcoming";
 import type {
@@ -36,12 +38,17 @@ function retry(failureCount: number, error: unknown): boolean {
  * Der Katalog der Ranglisten: Beschriftungen, Bereiche und Regeln beider
  * Tabellen in einem Aufruf. Eine Tabelle selbst kennt nur den Bereich, den man
  * abgefragt hat — für die Umschalter braucht es aber alle Beschriftungen.
+ *
+ * Wie jede Ressource unter einer Reihe: der Slug steckt im Query-Key, sonst
+ * zeigte der Umschalter nach dem Wechsel noch die Bereiche der vorigen.
  */
 export function useRankingDescriptors() {
+  const { series } = useSeries();
+
   return useQuery<RankingDescriptor[], ApiError>({
-    queryKey: ["rankings"],
+    queryKey: ["rankings", series.slug],
     queryFn: ({ signal }) =>
-      apiGet<RankingDescriptor[]>(endpoints.rankings(), { signal }).then(
+      apiGet<RankingDescriptor[]>(endpoints.rankings(series.slug), { signal }).then(
         (envelope) => envelope.data,
       ),
     // Ändert sich nur mit einem Deploy, nicht mit den Daten.
@@ -71,10 +78,12 @@ export function useScopes(type: RankingType) {
 
 /** Die Landing-Page-Tabelle: nach Ø Platzierung, aufgeteilt nach Quartalen. */
 export function useQuarterlyRanking(scope: RankingScope | undefined) {
+  const { series } = useSeries();
+
   return useQuery<QuarterlyRankingTable, ApiError>({
-    queryKey: ["ranking", "quarterly", scope ?? "default"],
+    queryKey: ["ranking", "quarterly", series.slug, scope ?? "default"],
     queryFn: ({ signal }) =>
-      apiGet<QuarterlyRankingTable>(endpoints.quarterlyRanking(), {
+      apiGet<QuarterlyRankingTable>(endpoints.quarterlyRanking(series.slug), {
         query: { scope },
         signal,
       }).then((envelope) => envelope.data),
@@ -88,10 +97,12 @@ export function useQuarterlyRanking(scope: RankingScope | undefined) {
  * keine Mindestteilnahmen, keine Mindestgröße.
  */
 export function usePowerRanking() {
+  const { series } = useSeries();
+
   return useQuery<PowerRankingTable, ApiError>({
-    queryKey: ["ranking", "power"],
+    queryKey: ["ranking", "power", series.slug],
     queryFn: ({ signal }) =>
-      apiGet<PowerRankingTable>(endpoints.powerRanking(), { signal }).then(
+      apiGet<PowerRankingTable>(endpoints.powerRanking(series.slug), { signal }).then(
         (envelope) => envelope.data,
       ),
     retry,
@@ -99,10 +110,12 @@ export function usePowerRanking() {
 }
 
 export function useEvents(limit = 50) {
+  const { series } = useSeries();
+
   return useQuery<EventSummary[], ApiError>({
-    queryKey: ["events", limit],
+    queryKey: ["events", series.slug, limit],
     queryFn: ({ signal }) =>
-      apiGet<EventSummary[]>(endpoints.events(), {
+      apiGet<EventSummary[]>(endpoints.events(series.slug), {
         query: { limit },
         signal,
       }).then((envelope) => envelope.data),
@@ -111,11 +124,13 @@ export function useEvents(limit = 50) {
 }
 
 export function useEvent(eventId: number | undefined) {
+  const { series } = useSeries();
+
   return useQuery<EventDetail, ApiError>({
-    queryKey: ["event", eventId],
+    queryKey: ["event", series.slug, eventId],
     enabled: eventId !== undefined,
     queryFn: ({ signal }) =>
-      apiGet<EventDetail>(endpoints.event(eventId!), { signal }).then(
+      apiGet<EventDetail>(endpoints.event(series.slug, eventId!), { signal }).then(
         (envelope) => envelope.data,
       ),
     retry,
@@ -123,10 +138,12 @@ export function useEvent(eventId: number | undefined) {
 }
 
 export function usePlayers(search?: string) {
+  const { series } = useSeries();
+
   return useQuery<PlayerSummary[], ApiError>({
-    queryKey: ["players", search ?? ""],
+    queryKey: ["players", series.slug, search ?? ""],
     queryFn: ({ signal }) =>
-      apiGet<PlayerSummary[]>(endpoints.players(), {
+      apiGet<PlayerSummary[]>(endpoints.players(series.slug), {
         query: { q: search || undefined },
         signal,
       }).then((envelope) => envelope.data),
@@ -135,11 +152,13 @@ export function usePlayers(search?: string) {
 }
 
 export function usePlayer(playerId: string | undefined) {
+  const { series } = useSeries();
+
   return useQuery<PlayerDetail, ApiError>({
-    queryKey: ["player", playerId],
+    queryKey: ["player", series.slug, playerId],
     enabled: playerId !== undefined,
     queryFn: ({ signal }) =>
-      apiGet<PlayerDetail>(endpoints.player(playerId!), { signal }).then(
+      apiGet<PlayerDetail>(endpoints.player(series.slug, playerId!), { signal }).then(
         (envelope) => envelope.data,
       ),
     retry,
@@ -170,9 +189,11 @@ export function useRankedDay() {
  * Screens ist er trotzdem immer frisch.
  */
 export function useUpcomingEvent() {
+  const { series } = useSeries();
+
   return useQuery<UpcomingEvent | null, ApiError>({
-    queryKey: ["upcoming-event"],
-    queryFn: ({ signal }) => fetchUpcomingEvent({ signal }),
+    queryKey: ["upcoming-event", series.slug],
+    queryFn: ({ signal }) => fetchUpcomingEvent(series.websitePath, { signal }),
     staleTime: 5 * 60 * 1000,
     retry,
   });

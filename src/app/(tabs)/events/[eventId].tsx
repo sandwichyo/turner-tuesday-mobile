@@ -32,8 +32,6 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { Table, TableCell, TableRow, rankIcon } from "@/components/ui/table";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 
-const STARTGG_URL = "https://start.gg/whv";
-
 function formatDate(iso?: string | null): string {
   if (!iso) return "Unbekannt";
 
@@ -183,7 +181,6 @@ export default function EventDetailScreen() {
   const { data, isPending, error, refetch } = useEvent(Number(eventId));
   const [playerQuery, setPlayerQuery] = useState("");
 
-  const openStartGg = () => Linking.openURL(STARTGG_URL);
 
   const { rounds, totals } = useMemo(
     () => buildBracket(data?.sets ?? [], (data?.standings ?? []).length),
@@ -212,7 +209,7 @@ export default function EventDetailScreen() {
 
   if (isPending) {
     return (
-      <Screen onOpenStartGg={openStartGg}>
+      <Screen>
         <LoadingState label="Event wird geladen …" />
       </Screen>
     );
@@ -220,7 +217,7 @@ export default function EventDetailScreen() {
 
   if (error) {
     return (
-      <Screen onOpenStartGg={openStartGg}>
+      <Screen>
         <ErrorState message={error.message} onRetry={() => refetch()} />
       </Screen>
     );
@@ -229,7 +226,7 @@ export default function EventDetailScreen() {
   const standings = data?.standings ?? [];
 
   return (
-    <Screen onOpenStartGg={openStartGg}>
+    <Screen>
       <ScrollView contentContainerClassName="gap-4 p-4">
         <Card>
           <CardBody className="gap-4">
