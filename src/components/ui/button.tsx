@@ -2,7 +2,8 @@
  * Ersatz für daisyUIs `btn` in den Varianten, die die Website nutzt.
  *
  * `startgg` ist der neutrale Button aus Home.vue: das Logo ist mehrfarbig, der
- * Button deshalb einfarbig — im Dark-Theme weiß mit dunkler Schrift.
+ * Button deshalb einfarbig — im Dunkeln weiß mit dunkler Schrift, im Hellen
+ * umgekehrt (die Tokens dazu stehen in global.css).
  */
 import { Pressable, Text, View } from "react-native";
 

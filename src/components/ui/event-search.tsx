@@ -10,6 +10,7 @@ import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 import type { EventSummary } from "@/lib/api/types";
+import { useThemeColors } from "@/lib/theme";
 
 export function EventSearch({
   events,
@@ -22,6 +23,7 @@ export function EventSearch({
   onSelect: (eventId: number) => void;
   formatDate: (iso?: string | null) => string;
 }) {
+  const colors = useThemeColors();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
 
@@ -46,7 +48,7 @@ export function EventSearch({
         }}
         onFocus={() => setOpen(true)}
         placeholder={selected?.label ?? selected?.name ?? "Event auswählen"}
-        placeholderTextColor="rgb(122 130 144)"
+        placeholderTextColor={colors.muted}
         editable={events.length > 0}
         className="rounded-lg border border-base-300 bg-base-200 px-3 py-2.5 text-base-content"
       />

@@ -9,8 +9,10 @@ import { useMemo, useState } from "react";
 import { Linking, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 import { usePlayer } from "@/lib/api/queries";
+import { useThemeColors } from "@/lib/theme";
 import { Screen } from "@/components/screen";
 import { Card, CardBody } from "@/components/ui/card";
+import { TabBarSpacer } from "@/components/ui/floating-tab-bar";
 import { PAGE_SIZE, Pagination } from "@/components/ui/pagination";
 import { PlacementChart } from "@/components/ui/placement-chart";
 import { StatTile } from "@/components/ui/stat-tile";
@@ -38,6 +40,7 @@ function formatWinRate(value: number): string {
 }
 
 export default function PlayerDetailScreen() {
+  const colors = useThemeColors();
   const { playerId } = useLocalSearchParams<{ playerId: string }>();
   const { data, isPending, error, refetch } = usePlayer(playerId);
 
@@ -98,7 +101,7 @@ export default function PlayerDetailScreen() {
 
   return (
     <Screen onOpenStartGg={openStartGg}>
-      <ScrollView contentContainerClassName="gap-4 p-4 pb-8">
+      <ScrollView contentContainerClassName="gap-4 p-4">
         <Card>
           <CardBody className="gap-4">
             <Pressable onPress={() => router.back()} accessibilityRole="button" hitSlop={8}>
@@ -155,7 +158,7 @@ export default function PlayerDetailScreen() {
                 setPlacementPage(1);
               }}
               placeholder="Event suchen …"
-              placeholderTextColor="rgb(122 130 144)"
+              placeholderTextColor={colors.muted}
               autoCorrect={false}
               className="rounded-lg border border-base-300 bg-base-200 px-3 py-2.5 text-base-content"
             />
@@ -284,7 +287,7 @@ export default function PlayerDetailScreen() {
                   value={opponentQuery}
                   onChangeText={setOpponentQuery}
                   placeholder="Gegner suchen …"
-                  placeholderTextColor="rgb(122 130 144)"
+                  placeholderTextColor={colors.muted}
                   autoCorrect={false}
                   className="rounded-lg border border-base-300 bg-base-200 px-3 py-2.5 text-base-content"
                 />
@@ -338,6 +341,8 @@ export default function PlayerDetailScreen() {
             ) : null}
           </CardBody>
         </Card>
+
+        <TabBarSpacer />
       </ScrollView>
     </Screen>
   );

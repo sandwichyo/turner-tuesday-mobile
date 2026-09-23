@@ -1,37 +1,29 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Tabs } from "expo-router";
+import { Tabs } from "expo-router/js-tabs";
+
+import { FloatingTabBar } from "@/components/ui/floating-tab-bar";
 
 /**
- * Die Bottom-Navigation. Farben als Werte, weil NativeWind-Klassen in den
- * Optionen der Navigation nicht greifen — die Werte sind dieselben Tokens wie
- * in global.css, hier fest im Dark-Theme.
+ * Die Bottom-Navigation. Das Aussehen steckt in FloatingTabBar — hier stehen
+ * nur die Einträge: Titel und Symbol. Gefüllt, solange der Tab aktiv ist, sonst
+ * als Umriss; so machen es die Leisten von iOS.
  */
-const COLORS = {
-  active: "rgb(116 128 255)",
-  inactive: "rgb(122 130 144)",
-  background: "rgb(29 35 42)",
-  border: "rgb(21 25 30)",
-};
-
 export default function TabsLayout() {
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: COLORS.active,
-        tabBarInactiveTintColor: COLORS.inactive,
-        tabBarStyle: {
-          backgroundColor: COLORS.background,
-          borderTopColor: COLORS.border,
-        },
-      }}
+      tabBar={(props) => <FloatingTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: "Übersicht",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "calendar" : "calendar-outline"}
+              size={size}
+              color={color}
+            />
           ),
         }}
       />
@@ -39,8 +31,25 @@ export default function TabsLayout() {
         name="power-ranking"
         options={{
           title: "Power Ranking",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="trophy-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "trophy" : "trophy-outline"}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Einstellungen",
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "settings" : "settings-outline"}
+              size={size}
+              color={color}
+            />
           ),
         }}
       />

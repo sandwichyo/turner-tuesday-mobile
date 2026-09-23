@@ -19,6 +19,7 @@ import { getPlayerImage } from "@/lib/player-images";
 import { Screen } from "@/components/screen";
 import { DotBadge, type BadgeTone } from "@/components/ui/badge";
 import { Card, CardBody } from "@/components/ui/card";
+import { TabBarSpacer } from "@/components/ui/floating-tab-bar";
 import { Hero } from "@/components/ui/hero";
 import { Segmented } from "@/components/ui/segmented";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/states";
@@ -220,7 +221,7 @@ export default function PowerRankingScreen() {
         renderItem={({ item }) => (
           <PlayerCard row={item} eventsConsidered={eventsConsidered} />
         )}
-        contentContainerClassName="px-4 pb-8"
+        contentContainerClassName="px-4 pb-4"
         refreshing={isRefetching}
         onRefresh={refetch}
         ListHeaderComponent={
@@ -254,6 +255,7 @@ export default function PowerRankingScreen() {
             <Legend />
           </View>
         }
+        ListFooterComponent={<TabBarSpacer />}
         ListEmptyComponent={
           <EmptyState
             message="Keine Daten für diesen Zeitraum verfügbar."

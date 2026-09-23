@@ -13,10 +13,12 @@ import React, { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import Svg, { Circle, Line, Polyline, Text as SvgText } from "react-native-svg";
 
+import { useThemeColors } from "@/lib/theme";
+
+/** Linie und Punkte tragen in beiden Themes; Gitter und Zahlen nicht — die
+ *  kommen deshalb aus der Palette. */
 const LINE_COLOR = "#89b4fa";
 const POINT_COLOR = "#cba6f7";
-const GRID_COLOR = "rgba(108, 112, 134, 0.35)";
-const LABEL_COLOR = "rgb(122 130 144)";
 const HEIGHT = 240;
 const PADDING = { top: 12, right: 12, bottom: 12, left: 28 };
 
@@ -28,6 +30,7 @@ export type PlacementPoint = {
 };
 
 export function PlacementChart({ points }: { points: PlacementPoint[] }) {
+  const colors = useThemeColors();
   const [width, setWidth] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
 
@@ -82,7 +85,7 @@ export function PlacementChart({ points }: { points: PlacementPoint[] }) {
                   y1={yOf(tick)}
                   x2={width - PADDING.right}
                   y2={yOf(tick)}
-                  stroke={GRID_COLOR}
+                  stroke={colors.grid}
                   strokeWidth={1}
                 />
                 {/* Platz 0 gibt es nicht — die Linie bleibt, die Zahl entfällt. */}
@@ -91,7 +94,7 @@ export function PlacementChart({ points }: { points: PlacementPoint[] }) {
                     x={PADDING.left - 6}
                     y={yOf(tick) + 3}
                     fontSize={9}
-                    fill={LABEL_COLOR}
+                    fill={colors.muted}
                     textAnchor="end"
                   >
                     {String(tick)}

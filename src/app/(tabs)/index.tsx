@@ -5,9 +5,9 @@
  * den Endplatzierungen und schließlich die Ranking-Tabelle. Was die Seite im
  * Web zweispaltig nebeneinander stellt, steht hier untereinander.
  *
- * Eine Abweichung, die keine Entscheidung ist: der Anmeldestand „x/y" am
- * Aufruf-Button fehlt. Er kommt im Web live von start.gg über den
- * UpcomingEventProvider und ist unter /api/v1 nicht exponiert.
+ * Der Anmeldestand „x/y" am Aufruf-Button ist der einzige Wert dieses Screens,
+ * der nicht aus /api/v1 kommt: die Zahl liegt live bei start.gg. Woher die App
+ * sie stattdessen holt und was das kostet, steht in lib/api/upcoming.ts.
  */
 import { useMemo, useState } from "react";
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
@@ -22,9 +22,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { EventSearch } from "@/components/ui/event-search";
+import { TabBarSpacer } from "@/components/ui/floating-tab-bar";
 import { Hero } from "@/components/ui/hero";
 import { PAGE_SIZE, Pagination } from "@/components/ui/pagination";
 import { Segmented } from "@/components/ui/segmented";
+import { SignupCounter } from "@/components/ui/signup-counter";
 import { StatTile } from "@/components/ui/stat-tile";
 import { Table, TableCell, TableRow, rankIcon } from "@/components/ui/table";
 import { ErrorState, LoadingState } from "@/components/ui/states";
@@ -269,21 +271,31 @@ export default function OverviewScreen() {
 
   return (
     <Screen onOpenStartGg={openStartGg}>
-      <ScrollView contentContainerClassName="gap-4 p-4 pb-8">
+      <ScrollView contentContainerClassName="gap-4 p-4">
         <Hero
           title="Turner Overview"
           action={
-            <Button
-              label="Jetzt teilnehmen"
-              variant="startgg"
-              onPress={openStartGg}
-              icon={<StartGgLogo size={18} />}
-            />
+            /*
+              Der Anmeldestand steht direkt am Aufruf, wie im Web: die Zahl ist
+              der Grund, den Button zu drücken — oder eben nicht. Dort steht sie
+              unterhalb von `lg` über dem vollbreiten Button, hier also immer.
+            */
+            <View className="gap-3">
+              <SignupCounter />
+              <Button
+                label="Jetzt teilnehmen"
+                variant="startgg"
+                onPress={openStartGg}
+                icon={<StartGgLogo size={18} />}
+              />
+            </View>
           }
         />
 
         <EventPicker />
         <RankingCard />
+
+        <TabBarSpacer />
       </ScrollView>
     </Screen>
   );

@@ -14,6 +14,7 @@
     "expo-glass-effect": "~57.0.3",
     "expo-image": "~57.0.5",
     "expo-linking": "~57.0.10",
+    "expo-notifications": "~57.0.18",
     "expo-router": "~57.0.21",
     "expo-splash-screen": "~57.0.9",
     "expo-status-bar": "~57.0.1",
@@ -39,12 +40,18 @@
   },
   "scripts": {
     "start": "expo start",
-    "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "go:ios": "expo start --ios",
+    "go:android": "expo start --android",
+    "ios": "expo run:ios",
+    "android": "expo run:android",
     "web": "expo start --web",
     "lint": "expo lint",
-    "gen:api": "npx --yes openapi-typescript@7 openapi/melee-v1.yaml -o src/lib/api/schema.ts"
+    "gen:api": "npx --yes openapi-typescript@7 openapi/melee-v1.yaml -o src/lib/api/schema.ts",
+    "prebuild": "expo prebuild --clean",
+    "build:ipa": "bash scripts/build-ipa.sh",
+    "build:apk": "bash scripts/build-apk.sh",
+    "build:apk:cloud": "eas build --platform android --profile preview",
+    "build:doctor": "bash scripts/build-doctor.sh"
   },
   "private": true
 }

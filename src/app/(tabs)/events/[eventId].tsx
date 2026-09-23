@@ -22,10 +22,12 @@ import {
   type SetView,
 } from "@/lib/bracket";
 import { getCharacterStyle, getStockIcon } from "@/lib/characters";
+import { useThemeColors } from "@/lib/theme";
 import { Screen } from "@/components/screen";
 import { StartGgLogo } from "@/components/startgg-logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
+import { TabBarSpacer } from "@/components/ui/floating-tab-bar";
 import { StatTile } from "@/components/ui/stat-tile";
 import { Table, TableCell, TableRow, rankIcon } from "@/components/ui/table";
 import { ErrorState, LoadingState } from "@/components/ui/states";
@@ -176,6 +178,7 @@ function RoundSection({ round }: { round: BracketRound }) {
 }
 
 export default function EventDetailScreen() {
+  const colors = useThemeColors();
   const { eventId } = useLocalSearchParams<{ eventId: string }>();
   const { data, isPending, error, refetch } = useEvent(Number(eventId));
   const [playerQuery, setPlayerQuery] = useState("");
@@ -227,7 +230,7 @@ export default function EventDetailScreen() {
 
   return (
     <Screen onOpenStartGg={openStartGg}>
-      <ScrollView contentContainerClassName="gap-4 p-4 pb-8">
+      <ScrollView contentContainerClassName="gap-4 p-4">
         <Card>
           <CardBody className="gap-4">
             <Pressable onPress={() => router.back()} accessibilityRole="button" hitSlop={8}>
@@ -277,7 +280,7 @@ export default function EventDetailScreen() {
               value={playerQuery}
               onChangeText={setPlayerQuery}
               placeholder="Nach Spieler filtern …"
-              placeholderTextColor="rgb(122 130 144)"
+              placeholderTextColor={colors.muted}
               autoCorrect={false}
               className="rounded-lg border border-base-300 bg-base-200 px-3 py-2.5 text-base-content"
             />
@@ -344,6 +347,8 @@ export default function EventDetailScreen() {
             </CardBody>
           </Card>
         ) : null}
+
+        <TabBarSpacer />
       </ScrollView>
     </Screen>
   );

@@ -41,3 +41,8 @@ example
 # generated native folders
 /ios
 /android
+
+# Der Build-Ordner bleibt im Projekt, sein Inhalt nicht: die Artefakte sind
+# zu groß fürs Repo, der Ordner soll aber vorhanden und beschrieben sein.
+/build/*
+!/build/README.md

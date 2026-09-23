@@ -5,6 +5,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { ApiError, apiGet, endpoints } from "./client";
+import { fetchUpcomingEvent, type UpcomingEvent } from "./upcoming";
 import type {
   EventDetail,
   RankingDescriptor,
@@ -129,6 +130,24 @@ export function useRankedDay() {
     // Der Countdown läuft mit der Uhr, deshalb hat dieser Endpunkt bewusst
     // keinen Validator und nur ein kurzes max-age.
     staleTime: 60_000,
+    retry,
+  });
+}
+
+/**
+ * Der Anmeldestand des nächsten Turniers — die einzige Zahl der App, die nicht
+ * aus /api/v1 kommt. Warum, steht in upcoming.ts.
+ *
+ * Anders als die importierten Daten bewegt sie sich unter der Woche, aber
+ * langsam: ein Turner Tuesday füllt sich über Tage, nicht über Minuten. Die
+ * fünf Minuten halten den 30-KB-Abruf entsprechend selten — beim Start des
+ * Screens ist er trotzdem immer frisch.
+ */
+export function useUpcomingEvent() {
+  return useQuery<UpcomingEvent | null, ApiError>({
+    queryKey: ["upcoming-event"],
+    queryFn: ({ signal }) => fetchUpcomingEvent({ signal }),
+    staleTime: 5 * 60 * 1000,
     retry,
   });
 }

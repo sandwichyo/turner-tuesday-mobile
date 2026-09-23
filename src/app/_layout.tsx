@@ -1,13 +1,42 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { DarkTheme, Stack, ThemeProvider } from "expo-router";
+import {
+  DarkTheme,
+  DefaultTheme,
+  Stack,
+  ThemeProvider as NavigationThemeProvider,
+} from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 
+import { NotificationsProvider, RankedDayReminders } from "@/lib/notifications";
+import { ThemeProvider, useScheme } from "@/lib/theme";
+
 import "../global.css";
 
+// Weg ist er, sobald die Theme-Wahl aus dem Speicher da ist — siehe lib/theme.tsx.
 SplashScreen.preventAutoHideAsync();
-SplashScreen.hideAsync();
+
+/**
+ * Alles, was das gewählte Schema kennen muss. Eine Ebene tiefer als der
+ * ThemeProvider, weil `useScheme()` dessen Zustand liest.
+ */
+function App() {
+  const scheme = useScheme();
+
+  return (
+    <NavigationThemeProvider value={scheme === "dark" ? DarkTheme : DefaultTheme}>
+      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+
+      {/* Plant die Ranked-Day-Erinnerungen; zeichnet nichts. */}
+      <RankedDayReminders />
+
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+      </Stack>
+    </NavigationThemeProvider>
+  );
+}
 
 export default function RootLayout() {
   /**
@@ -30,14 +59,12 @@ export default function RootLayout() {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {/* Fest dunkel, wie das Original — nicht dem Systemschema folgend. */}
-      <ThemeProvider value={DarkTheme}>
-        <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-        </Stack>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <NotificationsProvider>
+          <App />
+        </NotificationsProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

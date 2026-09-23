@@ -9,6 +9,9 @@ import { Image } from "expo-image";
 import { Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useThemeColors } from "@/lib/theme";
+
+import { RankedDayIndicator } from "./ui/ranked-day-indicator";
 import { StartGgLogo } from "./startgg-logo";
 
 const BACKGROUND = require("../../assets/brand/background.webp");
@@ -42,11 +45,20 @@ export function Screen({
   children: React.ReactNode;
   onOpenStartGg: () => void;
 }) {
+  const colors = useThemeColors();
+
   return (
     <View className="flex-1 bg-base-200">
       <Image
         source={BACKGROUND}
-        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: 0.2 }}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          opacity: colors.backdropOpacity,
+        }}
         contentFit="cover"
         contentPosition="center"
       />
@@ -54,6 +66,13 @@ export function Screen({
       <SafeAreaView className="flex-1" edges={["top"]}>
         <AppHeader onOpenStartGg={onOpenStartGg} />
         {children}
+
+        {/*
+          Wie im Web-Layout: der Ranked-Day-Anzeiger schwebt über allem und
+          bleibt beim Wechsel des Tabs stehen. Zuletzt gerendert, damit er über
+          dem Inhalt liegt; absolut positioniert, also nimmt er ihm keinen Platz.
+        */}
+        <RankedDayIndicator />
       </SafeAreaView>
     </View>
   );
