@@ -1,10 +1,10 @@
 /**
- * Power Ranking — portiert aus frontend/src/pages/PowerRanking.vue.
+ * Power Ranking v2 — portiert aus frontend/src/pages/PowerRankingV2.vue.
  *
- * Ein Unterschied zum Web: dort liefert der Inertia-Controller beide Bereiche
- * (`qualified` und `all`) in einem Rutsch, die API trennt sie über `?scope=`.
- * Der Screen fragt deshalb nur den aktiven Bereich ab; React Query hält den
- * anderen im Cache, sodass der Wechsel trotzdem sofort erscheint.
+ * Gegenüber v1 fällt die Bereichsauswahl weg: es gibt keine Mindestgröße und
+ * keine Mindestteilnahmen mehr, jedes Event zählt — gewichtet danach, wie stark
+ * sein Feld besetzt war. Sortiert wird nach `score`, der Spielstärke auf einer
+ * Skala, auf der 500 der Ligadurchschnitt ist.
  */
 import { Image } from "expo-image";
 import { useMemo, useState } from "react";
@@ -12,8 +12,8 @@ import { FlatList, Linking, Pressable, Text, View } from "react-native";
 
 import { router } from "expo-router";
 
-import { useRanking, useScopeOptions } from "@/lib/api/queries";
-import type { RankingRow, RankingScope, RankingSection } from "@/lib/api/types";
+import { usePowerRanking } from "@/lib/api/queries";
+import type { PowerRankingRow, PowerRankingSection } from "@/lib/api/types";
 import { getCharacterStyle } from "@/lib/characters";
 import { getPlayerImage } from "@/lib/player-images";
 import { Screen } from "@/components/screen";
@@ -27,7 +27,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/ui/states";
 const STARTGG_URL = "https://start.gg/whv";
 
 /** "Gesamt" plus die Halbjahre — dieselbe Reihenfolge wie im Web. */
-type Period = RankingSection & { key: string; label: string };
+type Period = PowerRankingSection & { key: string; label: string };
 
 const OVERALL_KEY = "overall";
 
@@ -37,15 +37,18 @@ function currentHalfYearKey(): string {
   return `${now.getFullYear()}-H${now.getMonth() < 6 ? 1 : 2}`;
 }
 
-function formatAverage(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(2);
+/** Ligadurchschnitt auf der Score-Skala — Bezugspunkt jeder Einordnung. */
+const AVERAGE_SCORE = 500;
+
+function formatScore(value: number): string {
+  return String(Math.round(value));
 }
 
-/** Die Ampel für verpasste Events aus der Legende der Website. */
-function missedTone(missed: number): BadgeTone {
-  if (missed <= 0) return "success";
+/** Die Ampel der Website: wie stark waren die Felder dieses Spielers? */
+function fieldTone(fieldStrength: number): BadgeTone {
+  if (fieldStrength >= AVERAGE_SCORE + 25) return "error";
 
-  return missed <= 5 ? "warning" : "error";
+  return fieldStrength <= AVERAGE_SCORE - 25 ? "success" : "warning";
 }
 
 const RANK_STYLES: Record<number, { border: string; number: string; glow: string }> = {
@@ -57,9 +60,9 @@ const RANK_STYLES: Record<number, { border: string; number: string; glow: string
 /** Die drei Farbstufen unter den Umschaltern, wie im Web. */
 function Legend() {
   const entries: { tone: BadgeTone; label: string }[] = [
-    { tone: "success", label: "Keine Events verpasst" },
-    { tone: "warning", label: "1–5 Events verpasst" },
-    { tone: "error", label: "Über 5 Events verpasst" },
+    { tone: "error", label: "Überdurchschnittlich starke Gegner" },
+    { tone: "warning", label: "Durchschnittliche Gegner" },
+    { tone: "success", label: "Unterdurchschnittlich starke Gegner" },
   ];
 
   return (
@@ -74,11 +77,11 @@ function Legend() {
   );
 }
 
-function PlayerCard({ row, eventsConsidered }: { row: RankingRow; eventsConsidered: number }) {
+function PlayerCard({ row }: { row: PowerRankingRow }) {
   const rank = row.rank ?? 0;
   const rankStyle = RANK_STYLES[rank];
   const image = getPlayerImage(row.playerId ?? "", row.topCharacter?.characterName);
-  const missed = Math.max(0, eventsConsidered - (row.attendances ?? 0));
+  const fieldStrength = row.averageFieldStrength ?? AVERAGE_SCORE;
   const characterStyle = getCharacterStyle(row.topCharacter?.characterName);
 
   return (
@@ -130,14 +133,24 @@ function PlayerCard({ row, eventsConsidered }: { row: RankingRow; eventsConsider
           </View>
         )}
 
-        <View className="mt-1 flex-row items-center justify-between">
-          <View className="flex-row items-center gap-1.5">
-            <Text className="text-sm text-base-muted">
-              {formatAverage(row.averagePlacement ?? 0)}
+        <View className="mt-1 gap-1">
+          <View className="flex-row items-baseline justify-between">
+            <Text className="text-2xl font-black text-base-content">
+              {formatScore(row.score ?? AVERAGE_SCORE)}
             </Text>
-            <DotBadge tone={missedTone(missed)} />
+            <Text className="text-sm text-base-muted">{row.attendances} Events</Text>
           </View>
-          <Text className="text-sm text-base-muted">{row.attendances} Events</Text>
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center gap-1.5">
+              <DotBadge tone={fieldTone(fieldStrength)} />
+              <Text className="text-sm text-base-muted">
+                Gegner Ø {formatScore(fieldStrength)}
+              </Text>
+            </View>
+            <Text className="text-sm text-base-muted">
+              {row.setWins}–{row.setLosses} Sets
+            </Text>
+          </View>
         </View>
       </CardBody>
     </Card>
@@ -146,11 +159,9 @@ function PlayerCard({ row, eventsConsidered }: { row: RankingRow; eventsConsider
 }
 
 export default function PowerRankingScreen() {
-  const [scope, setScope] = useState<RankingScope>("qualified");
   const [periodKey, setPeriodKey] = useState<string>(currentHalfYearKey());
 
-  const { data, isPending, error, refetch, isRefetching } = useRanking("power", scope);
-  const scopeOptions = useScopeOptions("power");
+  const { data, isPending, error, refetch, isRefetching } = usePowerRanking();
   const openStartGg = () => Linking.openURL(STARTGG_URL);
 
   const periods = useMemo<Period[]>(() => {
@@ -161,22 +172,23 @@ export default function PowerRankingScreen() {
         key: OVERALL_KEY,
         label: "Gesamt",
         eventsConsidered: data.overall?.eventsConsidered,
+        eventsSkipped: data.overall?.eventsSkipped,
         rows: data.overall?.rows,
       },
       ...(data.periods ?? []).map((period) => ({
         key: period.key ?? "",
         label: period.label ?? "",
         eventsConsidered: period.eventsConsidered,
+        eventsSkipped: period.eventsSkipped,
         rows: period.rows,
       })),
     ];
   }, [data]);
 
   /**
-   * Das laufende Halbjahr, sonst das jüngste vorhandene. Dass `periodKey` auf
-   * einen Zeitraum zeigt, den dieser Bereich nicht kennt, ist der Normalfall
-   * beim Bereichswechsel — deshalb wird hier aufgelöst statt beim Umschalten
-   * gesetzt.
+   * Das laufende Halbjahr, sonst das jüngste vorhandene — aufgelöst statt beim
+   * Umschalten gesetzt, weil das laufende Halbjahr noch ohne Events dastehen
+   * kann.
    */
   const activePeriod = useMemo<Period | null>(() => {
     if (periods.length === 0) return null;
@@ -211,16 +223,13 @@ export default function PowerRankingScreen() {
   }
 
   const rows = activePeriod?.rows ?? [];
-  const eventsConsidered = activePeriod?.eventsConsidered ?? 0;
 
   return (
     <Screen onOpenStartGg={openStartGg}>
       <FlatList
         data={rows}
         keyExtractor={(row) => row.playerId ?? String(row.rank)}
-        renderItem={({ item }) => (
-          <PlayerCard row={item} eventsConsidered={eventsConsidered} />
-        )}
+        renderItem={({ item }) => <PlayerCard row={item} />}
         contentContainerClassName="px-4 pb-4"
         refreshing={isRefetching}
         onRefresh={refetch}
@@ -229,12 +238,6 @@ export default function PowerRankingScreen() {
             <View className="px-4">
               <Hero title="Power Ranking" subtitle="Turner Tuesday Series" />
             </View>
-
-            <Segmented
-              options={scopeOptions}
-              value={scope}
-              onChange={(key) => setScope(key as RankingScope)}
-            />
 
             {periods.length > 1 ? (
               <Segmented
@@ -246,10 +249,13 @@ export default function PowerRankingScreen() {
             ) : null}
 
             <Text className="px-4 text-sm text-base-muted">
-              {eventsConsidered} Events berücksichtigt
-              {data?.rules?.minimumEntrants != null
-                ? ` · mind. ${data.rules.minimumEntrants} Teilnehmer pro Event`
+              {activePeriod?.eventsConsidered ?? 0} Events berücksichtigt
+              {activePeriod?.eventsSkipped
+                ? ` · ${activePeriod.eventsSkipped} ohne Gegner ausgelassen`
                 : ""}
+              {` · keine Mindestteilnahmen · Score ${formatScore(
+                data?.rules?.averageScore ?? AVERAGE_SCORE,
+              )} = Durchschnitt aller gewerteten Spieler`}
             </Text>
 
             <Legend />

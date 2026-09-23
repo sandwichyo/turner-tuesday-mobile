@@ -10,7 +10,7 @@
  * nicht. Der Hinweis steht deshalb sichtbar daneben, sobald es eng wird; der
  * ganze Satz geht wie im Web zusätzlich an den Screenreader.
  *
- * Woher die Zahl kommt und warum sie nicht aus /api/v1 stammt: upcoming.ts.
+ * Woher die Zahl kommt und warum sie in keiner API-Version steht: upcoming.ts.
  */
 import { Text, View } from "react-native";
 

@@ -6,7 +6,7 @@
  * Portiert aus reference/useRankedDay.ts, mit einem Unterschied: dort standen
  * Anker, Takt und Dauer als Konstanten im Code und mussten von Hand mit dem
  * Backend synchron gehalten werden. Hier sind sie nur der Notnagel — maßgeblich
- * ist `schedule` aus /api/v1/ranked-day, das genau dafür im Vertrag steht
+ * ist `schedule` aus /api/v2/ranked-day, das genau dafür im Vertrag steht
  * („The `schedule` block is enough to keep counting down offline").
  */
 import type { RankedDay } from "./api/types";

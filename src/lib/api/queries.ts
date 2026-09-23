@@ -13,9 +13,10 @@ import type {
   Meta,
   PlayerDetail,
   PlayerSummary,
+  PowerRankingTable,
+  QuarterlyRankingTable,
   RankedDay,
   RankingScope,
-  RankingTable,
   RankingType,
 } from "./types";
 
@@ -32,9 +33,9 @@ function retry(failureCount: number, error: unknown): boolean {
 }
 
 /**
- * Der Index der Ranglisten: Beschriftungen und Regeln beider Bereiche in einem
- * Aufruf. Die Tabellen selbst kennen nur den Bereich, den man abgefragt hat —
- * für die Umschalter braucht es aber beide Beschriftungen.
+ * Der Katalog der Ranglisten: Beschriftungen, Bereiche und Regeln beider
+ * Tabellen in einem Aufruf. Eine Tabelle selbst kennt nur den Bereich, den man
+ * abgefragt hat — für die Umschalter braucht es aber alle Beschriftungen.
  */
 export function useRankingDescriptors() {
   return useQuery<RankingDescriptor[], ApiError>({
@@ -49,25 +50,50 @@ export function useRankingDescriptors() {
   });
 }
 
-/** Die Umschalter-Beschriftungen einer Rangliste, in der Reihenfolge der API. */
-export function useScopeOptions(type: RankingType) {
+/**
+ * Die Umschalter einer Rangliste samt Vorgabe, in der Reihenfolge der API. Das
+ * Power Ranking führt in v2 keine Bereiche mehr — dort bleibt die Liste leer.
+ */
+export function useScopes(type: RankingType) {
   const { data } = useRankingDescriptors();
   const descriptor = data?.find((entry) => entry.type === type);
 
-  return (descriptor?.scopes ?? []).map((scope) => ({
-    key: scope.scope ?? "",
-    label: scope.label ?? "",
-  }));
+  return {
+    options: (descriptor?.scopes ?? []).map((scope) => ({
+      key: scope.scope ?? "",
+      label: scope.label ?? "",
+    })),
+    // Welche Wertungen eine Reihe führt, entscheidet /admin: ohne die
+    // „6+ Teilnehmer"-Tabelle wäre `qualified` ein 404.
+    defaultScope: descriptor?.defaultScope ?? undefined,
+  };
 }
 
-export function useRanking(type: RankingType, scope: RankingScope) {
-  return useQuery<RankingTable, ApiError>({
-    queryKey: ["ranking", type, scope],
+/** Die Landing-Page-Tabelle: nach Ø Platzierung, aufgeteilt nach Quartalen. */
+export function useQuarterlyRanking(scope: RankingScope | undefined) {
+  return useQuery<QuarterlyRankingTable, ApiError>({
+    queryKey: ["ranking", "quarterly", scope ?? "default"],
     queryFn: ({ signal }) =>
-      apiGet<RankingTable>(endpoints.ranking(type), {
+      apiGet<QuarterlyRankingTable>(endpoints.quarterlyRanking(), {
         query: { scope },
         signal,
       }).then((envelope) => envelope.data),
+    retry,
+  });
+}
+
+/**
+ * Power Ranking v2: jedes Event zählt, gewichtet danach, wie stark sein Feld
+ * besetzt war, sortiert nach `score` (500 = Ligadurchschnitt). Kein Bereich,
+ * keine Mindestteilnahmen, keine Mindestgröße.
+ */
+export function usePowerRanking() {
+  return useQuery<PowerRankingTable, ApiError>({
+    queryKey: ["ranking", "power"],
+    queryFn: ({ signal }) =>
+      apiGet<PowerRankingTable>(endpoints.powerRanking(), { signal }).then(
+        (envelope) => envelope.data,
+      ),
     retry,
   });
 }
@@ -136,7 +162,7 @@ export function useRankedDay() {
 
 /**
  * Der Anmeldestand des nächsten Turniers — die einzige Zahl der App, die nicht
- * aus /api/v1 kommt. Warum, steht in upcoming.ts.
+ * aus /api/v2 kommt. Warum, steht in upcoming.ts.
  *
  * Anders als die importierten Daten bewegt sie sich unter der Woche, aber
  * langsam: ein Turner Tuesday füllt sich über Tage, nicht über Minuten. Die

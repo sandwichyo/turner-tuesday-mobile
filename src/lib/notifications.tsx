@@ -1,7 +1,7 @@
 /**
  * Lokale Erinnerungen an den Slippi Free Ranked Day.
  *
- * Pushen kann niemand: /api/v1 liefert Daten und kennt keine Geräte. Der Takt
+ * Pushen kann niemand: /api/v2 liefert Daten und kennt keine Geräte. Der Takt
  * steht aber fest (lib/ranked-day.ts), also plant die App die Nachrichten
  * selbst — lokal, und damit auch dann zugestellt, wenn die App nicht läuft.
  *

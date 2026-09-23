@@ -22,7 +22,13 @@ export const API_BASE_URL: string =
   DEFAULT_BASE_URL;
 
 /** Die Version, auf die sich diese App festlegt. Siehe /api/versions. */
-export const API_VERSION = "v1";
+export const API_VERSION = "v2";
+
+/**
+ * Die Turnierreihe, auf die diese App zugeschnitten ist. In v2 hängt jede
+ * Datenressource unter einer Reihe — v1 kannte nur diese eine.
+ */
+export const SERIES = "turner-tuesday";
 
 const CACHE_PREFIX = "api-cache:";
 
@@ -68,7 +74,7 @@ async function writeCache(key: string, entry: CacheEntry): Promise<void> {
 }
 
 /**
- * Ein GET auf die API. `path` ist absolut ab dem Host, z. B. "/api/v1/events".
+ * Ein GET auf die API. `path` ist absolut ab dem Host, z. B. "/api/v2/series/turner-tuesday/events".
  */
 export async function apiGet<T>(
   path: string,
@@ -129,16 +135,23 @@ export async function apiGet<T>(
   return JSON.parse(body) as Envelope<T>;
 }
 
-/** Pfad-Helfer, damit die Versionsvorsilbe an genau einer Stelle steht. */
+/** Pfad-Helfer, damit Versionsvorsilbe und Reihe an genau einer Stelle stehen. */
+const SERIES_BASE = `/api/${API_VERSION}/series/${SERIES}`;
+
 export const endpoints = {
   versions: () => "/api/versions",
   meta: () => `/api/${API_VERSION}/meta`,
-  events: () => `/api/${API_VERSION}/events`,
-  event: (eventId: number) => `/api/${API_VERSION}/events/${eventId}`,
-  rankings: () => `/api/${API_VERSION}/rankings`,
-  ranking: (type: string) => `/api/${API_VERSION}/rankings/${type}`,
-  players: () => `/api/${API_VERSION}/players`,
+  events: () => `${SERIES_BASE}/events`,
+  event: (eventId: number) => `${SERIES_BASE}/events/${eventId}`,
+  rankings: () => `${SERIES_BASE}/rankings`,
+  // Die beiden Tabellen haben in v2 verschiedene Formen und deshalb je einen
+  // eigenen Pfad statt eines `{type}`-Platzhalters.
+  quarterlyRanking: () => `${SERIES_BASE}/rankings/quarterly`,
+  powerRanking: () => `${SERIES_BASE}/rankings/power`,
+  players: () => `${SERIES_BASE}/players`,
   player: (playerId: string) =>
-    `/api/${API_VERSION}/players/${encodeURIComponent(playerId)}`,
+    `${SERIES_BASE}/players/${encodeURIComponent(playerId)}`,
+  // Das Ranked-Day-Fenster ist für alle Reihen dasselbe und hängt deshalb nicht
+  // unter einer.
   rankedDay: () => `/api/${API_VERSION}/ranked-day`,
 } as const;

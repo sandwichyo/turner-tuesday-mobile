@@ -21,15 +21,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1": {
+    "/api/v2": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Index of the v1 resources */
-        get: operations["v1Index"];
+        /** Index of the v2 resources */
+        get: operations["v2Index"];
         put?: never;
         post?: never;
         delete?: never;
@@ -38,7 +38,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/meta": {
+    "/api/v2/meta": {
         parameters: {
             query?: never;
             header?: never;
@@ -47,10 +47,10 @@ export interface paths {
         };
         /**
          * How current the stored data is
-         * @description Cheap enough to poll. When `meta.dataVersion` is unchanged since the last
-         *     call, nothing else needs refetching.
+         * @description Across every series. Cheap enough to poll. When `meta.dataVersion` is
+         *     unchanged since the last call, nothing else needs refetching.
          */
-        get: operations["v1Meta"];
+        get: operations["v2Meta"];
         put?: never;
         post?: never;
         delete?: never;
@@ -59,7 +59,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/openapi.json": {
+    "/api/v2/openapi.json": {
         parameters: {
             query?: never;
             header?: never;
@@ -67,7 +67,7 @@ export interface paths {
             cookie?: never;
         };
         /** This document */
-        get: operations["v1OpenApiJson"];
+        get: operations["v2OpenApiJson"];
         put?: never;
         post?: never;
         delete?: never;
@@ -76,7 +76,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/openapi.yaml": {
+    "/api/v2/openapi.yaml": {
         parameters: {
             query?: never;
             header?: never;
@@ -84,7 +84,7 @@ export interface paths {
             cookie?: never;
         };
         /** This document, as YAML */
-        get: operations["v1OpenApiYaml"];
+        get: operations["v2OpenApiYaml"];
         put?: never;
         post?: never;
         delete?: never;
@@ -93,7 +93,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/events": {
+    "/api/v2/series": {
         parameters: {
             query?: never;
             header?: never;
@@ -101,11 +101,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List imported events, newest first
-         * @description Only events that have participants. An event without a single standing
-         *     carries no result and is left out of every response.
+         * List every tournament series
+         * @description Only changes with a deploy.
          */
-        get: operations["v1ListEvents"];
+        get: operations["v2ListSeries"];
         put?: never;
         post?: never;
         delete?: never;
@@ -114,7 +113,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/events/{eventId}": {
+    "/api/v2/series/{series}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One tournament series and the paths of its resources */
+        get: operations["v2GetSeries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/series/{series}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the series' imported events, newest first
+         * @description Only events that have participants. An event without a single standing
+         *     carries no result and is left out of every response.
+         */
+        get: operations["v2ListEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/series/{series}/events/{eventId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -126,10 +163,10 @@ export interface paths {
          * @description The raw material every ranking is built from, so a client can compute
          *     figures of its own. `sets` comes in bracket order and carries the round,
          *     the score and the characters of both sides, which is enough to redraw
-         *     the bracket. An event without participants is reported as `404`, the
-         *     same as an unknown id.
+         *     the bracket. An event without participants, and an event of another
+         *     series, is reported as `404`, the same as an unknown id.
          */
-        get: operations["v1GetEvent"];
+        get: operations["v2GetEvent"];
         put?: never;
         post?: never;
         delete?: never;
@@ -138,41 +175,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/rankings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Catalog of the ranking tables and their rules */
-        get: operations["v1ListRankings"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/rankings/{type}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** One ranking table */
-        get: operations["v1GetRanking"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/players": {
+    "/api/v2/series/{series}/rankings": {
         parameters: {
             query?: never;
             header?: never;
@@ -180,11 +183,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Every player that ever entered an imported event
-         * @description A roster, not a ranking: no attendance threshold and no malus.
-         *     `averagePlacement` is the overall average across all imported events.
+         * Catalog of the series' ranking tables and their rules
+         * @description One descriptor per table. No ranking is computed for this, but the
+         *     quarterly rules can be changed by an admin at any time, so the response
+         *     is validated against the data like every other one.
          */
-        get: operations["v1ListPlayers"];
+        get: operations["v2ListRankings"];
         put?: never;
         post?: never;
         delete?: never;
@@ -193,15 +197,21 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/players/{playerId}": {
+    "/api/v2/series/{series}/rankings/quarterly": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** One player's placements, head-to-head record and characters */
-        get: operations["v1GetPlayer"];
+        /**
+         * The quarterly ranking — the landing-page table
+         * @description Ranked by average placement, broken down per quarter, without a
+         *     non-attendance malus. The attendance threshold is the one the series is
+         *     configured with (2 unless an admin changed it) and is reported in
+         *     `rules`.
+         */
+        get: operations["v2GetQuarterlyRanking"];
         put?: never;
         post?: never;
         delete?: never;
@@ -210,7 +220,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/ranked-day": {
+    "/api/v2/series/{series}/rankings/power": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Power Ranking v2
+         * @description A placement is worth as much as the field it was earned against. Every
+         *     player gets a strength, seeded from the average-placement ranking and
+         *     refined until it stops moving: each result counts by how far it beat
+         *     (or missed) what the field made expectable — placements, every set and
+         *     tournament wins alike — and each event weighs as much as its field was
+         *     strong. Players with few attendances stay close to the league average
+         *     instead of being dropped.
+         *
+         *     `score` is that strength on a display scale where 500 is the league
+         *     average. Every half-year is computed independently from its own events
+         *     only, so a period's scores are not slices of the overall ones.
+         */
+        get: operations["v2GetPowerRanking"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/series/{series}/players": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every player that ever entered an event of the series
+         * @description A roster, not a ranking: no attendance threshold and no malus.
+         *     `averagePlacement` is the overall average across the series' events.
+         */
+        get: operations["v2ListPlayers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/series/{series}/players/{playerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One player's placements, head-to-head record and characters in the series
+         * @description Only this series' events count. A player who never entered one of them
+         *     is a `404` here, even when they have a history in another series.
+         */
+        get: operations["v2GetPlayer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/ranked-day": {
         parameters: {
             query?: never;
             header?: never;
@@ -219,11 +301,12 @@ export interface paths {
         };
         /**
          * Slippi's Free Ranked Day window
-         * @description Computed from a fixed cadence, not fetched from Slippi. The `schedule`
-         *     block is enough to keep counting down offline. Not conditionally
-         *     cacheable — `secondsRemaining` moves with the clock.
+         * @description Computed from a fixed cadence, not fetched from Slippi, and the same for
+         *     every series. The `schedule` block is enough to keep counting down
+         *     offline. Not conditionally cacheable — `secondsRemaining` moves with
+         *     the clock.
          */
-        get: operations["v1RankedDay"];
+        get: operations["v2RankedDay"];
         put?: never;
         post?: never;
         delete?: never;
@@ -237,7 +320,7 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         Meta: {
-            /** @example v1 */
+            /** @example v2 */
             apiVersion?: string | null;
             /**
              * Format: date-time
@@ -262,11 +345,11 @@ export interface components {
             instance?: string;
         };
         VersionInfo: {
-            /** @example v1 */
+            /** @example v2 */
             version?: string;
             /** @enum {string} */
             status?: "preview" | "stable" | "deprecated";
-            /** @example /api/v1 */
+            /** @example /api/v2 */
             basePath?: string;
             documentation?: string;
             /** Format: date */
@@ -286,6 +369,44 @@ export interface components {
             startedAt?: string | null;
             /** Format: date-time */
             finishedAt?: string | null;
+        };
+        Series: {
+            /** @example turner-tuesday */
+            slug?: string;
+            /** @example Turner Tuesday */
+            label?: string;
+            subtitle?: string;
+            /** @description The series the website opens on — and the only one v1 serves. */
+            isDefault?: boolean;
+            /**
+             * @description Base path of the series' API resources.
+             * @example /api/v2/series/turner-tuesday
+             */
+            path?: string;
+            /**
+             * @description The series' pages on the website.
+             * @example /turner-tuesday
+             */
+            websitePath?: string;
+            /** Format: uri */
+            startggUrl?: string;
+            /** @description Branding, as paths on the website's host. */
+            images?: {
+                logo?: string;
+                background?: string | null;
+            };
+        };
+        SeriesDetail: components["schemas"]["Series"] & {
+            /** @description The series' resource paths; `{eventId}` and `{playerId}` are placeholders. */
+            resources?: {
+                events?: string;
+                event?: string;
+                rankings?: string;
+                quarterlyRanking?: string;
+                powerRanking?: string;
+                players?: string;
+                player?: string;
+            };
         };
         EventSummary: {
             /** @description start.gg event id */
@@ -316,7 +437,7 @@ export interface components {
             placement?: number;
             /**
              * @description The placement re-ranked among the stored players (standard
-             *     competition ranking) — what the ranking average uses.
+             *     competition ranking) — what both rankings use.
              */
             rankPlacement?: number;
         };
@@ -367,6 +488,10 @@ export interface components {
             /** Format: float */
             percentage?: number;
         };
+        /**
+         * @description Both tables share this shape. `power` offers no scopes, so its `scopes`
+         *     is empty and its `defaultScope` null.
+         */
         RankingDescriptor: {
             /** @enum {string} */
             type?: "quarterly" | "power";
@@ -374,63 +499,162 @@ export interface components {
             path?: string;
             /** @enum {string} */
             periodType?: "quarter" | "half-year";
+            /** @description The scopes the series offers, the default first. */
             scopes?: {
                 /** @enum {string} */
                 scope?: "qualified" | "all";
                 label?: string;
                 minimumEntrants?: number | null;
             }[];
-            rules?: {
-                minimumAttendances?: number;
-                /** Format: float */
-                nonAttendancePenalty?: number;
-            };
+            /** @enum {string|null} */
+            defaultScope?: "qualified" | "all" | null;
+            rules?: components["schemas"]["QuarterlyDescriptorRules"] | components["schemas"]["PowerRankingRules"];
         };
-        RankingTable: {
-            /** @enum {string} */
-            type?: "quarterly" | "power";
+        QuarterlyDescriptorRules: {
+            /** @description Attendances a player needs to be listed; 1 when the series switched the rule off. */
+            minimumAttendances?: number;
+        };
+        QuarterlyRankingTable: {
+            /** @constant */
+            type?: "quarterly";
             /** @enum {string} */
             scope?: "qualified" | "all";
             label?: string;
             scopeLabel?: string;
-            /** @enum {string} */
-            periodType?: "quarter" | "half-year";
+            /** @constant */
+            periodType?: "quarter";
             rules?: {
                 minimumEntrants?: number | null;
                 minimumAttendances?: number;
-                /** Format: float */
-                nonAttendancePenalty?: number;
             };
-            overall?: components["schemas"]["RankingSection"];
-            periods?: components["schemas"]["RankingPeriod"][];
+            overall?: components["schemas"]["QuarterlyRankingSection"];
+            /** @description Newest first. */
+            periods?: components["schemas"]["QuarterlyRankingPeriod"][];
         };
-        RankingSection: {
+        QuarterlyRankingSection: {
             eventsConsidered?: number;
-            rows?: components["schemas"]["RankingRow"][];
+            rows?: components["schemas"]["QuarterlyRankingRow"][];
         };
-        RankingPeriod: {
-            /**
-             * @example 2026-Q3
-             * @example 2026-H1
-             */
+        QuarterlyRankingPeriod: {
+            /** @example 2026-Q3 */
             key?: string;
-            /**
-             * @example Q3 2026
-             * @example 1. Halbjahr 2026
-             */
+            /** @example Q3 2026 */
             label?: string;
-        } & components["schemas"]["RankingSection"];
-        RankingRow: {
+        } & components["schemas"]["QuarterlyRankingSection"];
+        QuarterlyRankingRow: {
             rank?: number;
             playerId?: string;
             displayName?: string;
             attendances?: number;
             /**
              * Format: float
-             * @description Average rank placement, including the malus where one applies.
+             * @description Average rank placement.
              */
             averagePlacement?: number;
             topCharacter?: components["schemas"]["Character"] | null;
+            /** @description Every other character the player picked, most-played first, limited to those above 5% of their picks. */
+            otherCharacters?: components["schemas"]["Character"][];
+        };
+        PowerRankingRules: {
+            /** @description No entrant threshold — small events weigh less instead of not counting. */
+            minimumEntrants?: null;
+            /** @description No attendance threshold — rare attendees stay close to the league average instead of being dropped. */
+            minimumAttendances?: null;
+            /**
+             * @description Events with fewer ranked entrants are skipped; without an opponent there is no result to rate.
+             * @example 2
+             */
+            minimumRankedEntrants?: number;
+            /**
+             * Format: float
+             * @description The score of a player exactly at the league average; the table is re-centred on it.
+             * @example 500
+             */
+            averageScore?: number;
+        };
+        PowerRankingTable: {
+            /** @constant */
+            type?: "power";
+            label?: string;
+            /** @constant */
+            periodType?: "half-year";
+            rules?: components["schemas"]["PowerRankingRules"];
+            overall?: components["schemas"]["PowerRankingSection"];
+            /** @description Newest first. Each computed from its own events only. */
+            periods?: components["schemas"]["PowerRankingPeriod"][];
+        };
+        PowerRankingSection: {
+            eventsConsidered?: number;
+            /** @description Events left out for having fewer than `rules.minimumRankedEntrants` ranked entrants. */
+            eventsSkipped?: number;
+            /** @description Refinement passes until strengths and event weights stopped moving. */
+            iterations?: number;
+            /** @description False when the pass limit was hit first — the table is then close to, but not exactly at, its fixed point. */
+            converged?: boolean;
+            /** @description Highest score first. */
+            rows?: components["schemas"]["PowerRankingRow"][];
+            /** @description The events this section was built from, strongest field first. */
+            events?: components["schemas"]["PowerRankingEvent"][];
+        };
+        PowerRankingPeriod: {
+            /** @example 2026-H1 */
+            key?: string;
+            /** @example 1. Halbjahr 2026 */
+            label?: string;
+        } & components["schemas"]["PowerRankingSection"];
+        PowerRankingRow: {
+            /** @description By score; ties are broken by head-to-head sets, then attendances, then best placement, then name. */
+            rank?: number;
+            playerId?: string;
+            displayName?: string;
+            /**
+             * Format: float
+             * @description Strength on the display scale, one decimal; `rules.averageScore` is the league average.
+             * @example 612.4
+             */
+            score?: number;
+            attendances?: number;
+            /** @description Best rank placement among the stored players. */
+            bestPlacement?: number;
+            /** @description Events won. */
+            tournamentWins?: number;
+            /** @description Sets won against other ranked entrants. */
+            setWins?: number;
+            setLosses?: number;
+            /**
+             * Format: float
+             * @description How strong the fields this player met were, on the same scale as `score`.
+             */
+            averageFieldStrength?: number;
+            /**
+             * Format: float
+             * @description Mean weight of the player's events; 1.0 is an averagely staffed event.
+             */
+            averageEventWeight?: number;
+            topCharacter?: components["schemas"]["Character"] | null;
+            /** @description Every other character the player picked, most-played first, limited to those above 5% of their picks. */
+            otherCharacters?: components["schemas"]["Character"][];
+        };
+        PowerRankingEvent: {
+            /** @description start.gg event id */
+            eventId?: number;
+            label?: string;
+            /** Format: date-time */
+            startAt?: string | null;
+            /** @description Entrants according to start.gg. */
+            numEntrants?: number | null;
+            /** @description Entrants the ranking could rate. */
+            rankedEntrants?: number;
+            /**
+             * Format: float
+             * @description Mean strength of the whole field, on the same scale as `score`.
+             */
+            fieldStrength?: number;
+            /**
+             * Format: float
+             * @description How much the event counted; 1.0 is an averagely staffed event.
+             */
+            weight?: number;
         };
         PlayerSummary: {
             /** @example player:12345 */
@@ -474,10 +698,35 @@ export interface components {
                     /** Format: float */
                     winRate?: number;
                 }[];
+                /** @description Head-to-head record per event, oldest first. Lets a client narrow the H2H numbers down to a time range without another request. */
+                timeline?: {
+                    eventId?: number;
+                    label?: string;
+                    /** Format: date-time */
+                    startAt?: string | null;
+                    opponents?: {
+                        playerId?: string;
+                        displayName?: string;
+                        wins?: number;
+                        losses?: number;
+                    }[];
+                }[];
             };
             characters?: {
                 totalSelections?: number;
                 top?: components["schemas"]["Character"][];
+                /** @description Character usage per event, oldest first. Lets a client narrow the character statistics down to a time range without another request. */
+                timeline?: {
+                    eventId?: number;
+                    label?: string;
+                    /** Format: date-time */
+                    startAt?: string | null;
+                    characters?: {
+                        characterId?: number;
+                        characterName?: string;
+                        count?: number;
+                    }[];
+                }[];
             };
         };
         RankedDay: {
@@ -516,7 +765,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description No such resource. */
+        /** @description No such resource — or no such series. */
         NotFound: {
             headers: {
                 [name: string]: unknown;
@@ -536,6 +785,8 @@ export interface components {
         };
     };
     parameters: {
+        /** @description The series slug, as listed by `GET /api/v2/series`. */
+        Series: string;
         /** @description The ETag of a cached copy. A match is answered with 304. */
         IfNoneMatch: string;
     };
@@ -565,7 +816,10 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: {
-                            /** @example v1 */
+                            /**
+                             * @description The version new clients should build against — never a preview.
+                             * @example v1
+                             */
                             current: string;
                             versions: components["schemas"]["VersionInfo"][];
                         };
@@ -575,7 +829,7 @@ export interface operations {
             };
         };
     };
-    v1Index: {
+    v2Index: {
         parameters: {
             query?: never;
             header?: never;
@@ -605,7 +859,7 @@ export interface operations {
             };
         };
     };
-    v1Meta: {
+    v2Meta: {
         parameters: {
             query?: never;
             header?: {
@@ -638,7 +892,7 @@ export interface operations {
             503: components["responses"]["Unavailable"];
         };
     };
-    v1OpenApiJson: {
+    v2OpenApiJson: {
         parameters: {
             query?: never;
             header?: never;
@@ -658,7 +912,7 @@ export interface operations {
             };
         };
     };
-    v1OpenApiYaml: {
+    v2OpenApiYaml: {
         parameters: {
             query?: never;
             header?: never;
@@ -678,7 +932,57 @@ export interface operations {
             };
         };
     };
-    v1ListEvents: {
+    v2ListSeries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One entry per series, in a stable order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["Series"][];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+        };
+    };
+    v2GetSeries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The series slug, as listed by `GET /api/v2/series`. */
+                series: components["parameters"]["Series"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The series. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["SeriesDetail"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    v2ListEvents: {
         parameters: {
             query?: {
                 /** @description Only events with at least this many entrants. */
@@ -690,7 +994,10 @@ export interface operations {
                 /** @description The ETag of a cached copy. A match is answered with 304. */
                 "If-None-Match"?: components["parameters"]["IfNoneMatch"];
             };
-            path?: never;
+            path: {
+                /** @description The series slug, as listed by `GET /api/v2/series`. */
+                series: components["parameters"]["Series"];
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -711,10 +1018,11 @@ export interface operations {
                 };
             };
             304: components["responses"]["NotModified"];
+            404: components["responses"]["NotFound"];
             503: components["responses"]["Unavailable"];
         };
     };
-    v1GetEvent: {
+    v2GetEvent: {
         parameters: {
             query?: never;
             header?: {
@@ -722,6 +1030,8 @@ export interface operations {
                 "If-None-Match"?: components["parameters"]["IfNoneMatch"];
             };
             path: {
+                /** @description The series slug, as listed by `GET /api/v2/series`. */
+                series: components["parameters"]["Series"];
                 /** @description The start.gg event id. */
                 eventId: number;
             };
@@ -747,18 +1057,25 @@ export interface operations {
             503: components["responses"]["Unavailable"];
         };
     };
-    v1ListRankings: {
+    v2ListRankings: {
         parameters: {
             query?: never;
-            header?: never;
-            path?: never;
+            header?: {
+                /** @description The ETag of a cached copy. A match is answered with 304. */
+                "If-None-Match"?: components["parameters"]["IfNoneMatch"];
+            };
+            path: {
+                /** @description The series slug, as listed by `GET /api/v2/series`. */
+                series: components["parameters"]["Series"];
+            };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description One descriptor per table. No ranking is computed for this. */
+            /** @description The quarterly descriptor, then the power descriptor. */
             200: {
                 headers: {
+                    ETag: components["headers"]["ETag"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -768,17 +1085,23 @@ export interface operations {
                     };
                 };
             };
+            304: components["responses"]["NotModified"];
+            404: components["responses"]["NotFound"];
+            503: components["responses"]["Unavailable"];
         };
     };
-    v1GetRanking: {
+    v2GetQuarterlyRanking: {
         parameters: {
             query?: {
                 /**
                  * @description `qualified` counts only events with at least 6 entrants, `all`
-                 *     counts every imported event.
+                 *     counts every imported event. A series that keeps no separate
+                 *     "6+ Teilnehmer" table only offers `all`, and defaults to it;
+                 *     the others default to `qualified`. See the catalog's
+                 *     `defaultScope`.
                  */
                 scope?: "qualified" | "all";
-                /** @description Return only this period, e.g. `2026-Q3` or `2026-H1`. */
+                /** @description Return only this quarter, e.g. `2026-Q3`. */
                 period?: string;
             };
             header?: {
@@ -786,19 +1109,14 @@ export interface operations {
                 "If-None-Match"?: components["parameters"]["IfNoneMatch"];
             };
             path: {
-                /**
-                 * @description `quarterly` — the landing-page table: at least 2 attendances, no
-                 *     non-attendance malus, broken down per quarter.
-                 *     `power` — the power ranking: at least 3 attendances, +0.05 placement
-                 *     points per missed event, broken down per half-year.
-                 */
-                type: "quarterly" | "power";
+                /** @description The series slug, as listed by `GET /api/v2/series`. */
+                series: components["parameters"]["Series"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description The table, overall plus per period. */
+            /** @description The table, overall plus per quarter. */
             200: {
                 headers: {
                     ETag: components["headers"]["ETag"];
@@ -806,18 +1124,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["RankingTable"];
+                        data: components["schemas"]["QuarterlyRankingTable"];
                         meta: components["schemas"]["Meta"];
                     };
                 };
             };
             304: components["responses"]["NotModified"];
             400: components["responses"]["BadRequest"];
-            404: components["responses"]["NotFound"];
+            /** @description Unknown series or period, or a scope the series does not offer. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             503: components["responses"]["Unavailable"];
         };
     };
-    v1ListPlayers: {
+    v2GetPowerRanking: {
+        parameters: {
+            query?: {
+                /** @description Return only this half-year, e.g. `2026-H1`. `overall` is always included. */
+                period?: string;
+            };
+            header?: {
+                /** @description The ETag of a cached copy. A match is answered with 304. */
+                "If-None-Match"?: components["parameters"]["IfNoneMatch"];
+            };
+            path: {
+                /** @description The series slug, as listed by `GET /api/v2/series`. */
+                series: components["parameters"]["Series"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The table, overall plus per half-year. */
+            200: {
+                headers: {
+                    ETag: components["headers"]["ETag"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PowerRankingTable"];
+                        meta: components["schemas"]["Meta"];
+                    };
+                };
+            };
+            304: components["responses"]["NotModified"];
+            /** @description Unknown series or period. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    v2ListPlayers: {
         parameters: {
             query?: {
                 /** @description Case-insensitive substring match on the display name. */
@@ -830,7 +1200,10 @@ export interface operations {
                 /** @description The ETag of a cached copy. A match is answered with 304. */
                 "If-None-Match"?: components["parameters"]["IfNoneMatch"];
             };
-            path?: never;
+            path: {
+                /** @description The series slug, as listed by `GET /api/v2/series`. */
+                series: components["parameters"]["Series"];
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -852,10 +1225,11 @@ export interface operations {
             };
             304: components["responses"]["NotModified"];
             400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
             503: components["responses"]["Unavailable"];
         };
     };
-    v1GetPlayer: {
+    v2GetPlayer: {
         parameters: {
             query?: never;
             header?: {
@@ -863,6 +1237,8 @@ export interface operations {
                 "If-None-Match"?: components["parameters"]["IfNoneMatch"];
             };
             path: {
+                /** @description The series slug, as listed by `GET /api/v2/series`. */
+                series: components["parameters"]["Series"];
                 /** @description The prefixed start.gg identity, e.g. `player:12345`. */
                 playerId: string;
             };
@@ -888,7 +1264,7 @@ export interface operations {
             503: components["responses"]["Unavailable"];
         };
     };
-    v1RankedDay: {
+    v2RankedDay: {
         parameters: {
             query?: never;
             header?: never;

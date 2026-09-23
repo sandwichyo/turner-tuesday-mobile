@@ -1,9 +1,9 @@
 /**
  * Lesbare Namen für die generierten Schema-Typen.
  *
- * schema.ts wird aus openapi/melee-v1.yaml erzeugt (`npm run gen:api`) und darf
+ * schema.ts wird aus openapi/melee-v2.yaml erzeugt (`npm run gen:api`) und darf
  * nicht von Hand geändert werden. Alles andere importiert aus dieser Datei,
- * damit `components["schemas"]["RankingRow"]` nicht durch die App wandert.
+ * damit `components["schemas"]["PowerRankingRow"]` nicht durch die App wandert.
  */
 import type { components } from "./schema";
 
@@ -14,6 +14,9 @@ export type Pagination = S["Pagination"];
 export type Problem = S["Problem"];
 export type VersionInfo = S["VersionInfo"];
 
+export type Series = S["Series"];
+export type SeriesDetail = S["SeriesDetail"];
+
 export type EventSummary = S["EventSummary"];
 export type EventDetail = S["EventDetail"];
 export type Standing = S["Standing"];
@@ -23,16 +26,25 @@ export type EventCharacterUsage = S["EventCharacterUsage"];
 
 export type Character = S["Character"];
 export type RankingDescriptor = S["RankingDescriptor"];
-export type RankingTable = S["RankingTable"];
-export type RankingSection = S["RankingSection"];
-export type RankingPeriod = S["RankingPeriod"];
-export type RankingRow = S["RankingRow"];
+
+/**
+ * Die beiden Tabellen haben in v2 verschiedene Formen: die Quartalswertung
+ * sortiert nach Ø Platzierung, das Power Ranking nach `score`.
+ */
+export type QuarterlyRankingTable = S["QuarterlyRankingTable"];
+export type QuarterlyRankingSection = S["QuarterlyRankingSection"];
+export type QuarterlyRankingRow = S["QuarterlyRankingRow"];
+
+export type PowerRankingTable = S["PowerRankingTable"];
+export type PowerRankingSection = S["PowerRankingSection"];
+export type PowerRankingRow = S["PowerRankingRow"];
+export type PowerRankingEvent = S["PowerRankingEvent"];
 
 export type PlayerSummary = S["PlayerSummary"];
 export type PlayerDetail = S["PlayerDetail"];
 export type RankedDay = S["RankedDay"];
 
-/** Die beiden Ranglisten und ihre Auswahl — v1 kennt genau diese Werte. */
+/** Die beiden Ranglisten. Bereiche kennt in v2 nur noch die Quartalswertung. */
 export type RankingType = "quarterly" | "power";
 export type RankingScope = "qualified" | "all";
 

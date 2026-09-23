@@ -2,8 +2,9 @@
  * Gruppiert die Sets eines Events zurück in die Runden des Brackets.
  *
  * Portiert aus backend/src/Service/Event/EventDetailBuilder.php. Im Web macht
- * das der Controller, die API liefert unter /api/v1/events/{id} aber ein
- * flaches `sets[]` — also muss es hier passieren.
+ * das der Controller, die API liefert unter
+ * /api/v2/series/{series}/events/{id} aber ein flaches `sets[]` — also muss es
+ * hier passieren.
  *
  * Zwei Anpassungen gegenüber der PHP-Fassung:
  *

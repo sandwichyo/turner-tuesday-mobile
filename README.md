@@ -110,9 +110,21 @@ reference/           Vorlagen aus dem abgelösten Web-Frontend
 
 ### API-Anbindung
 
-Die App legt sich auf **v1** fest. `src/lib/api/schema.ts` ist generiert und
-wird nicht von Hand geändert — bei einer Vertragsänderung die Spec in
-`openapi/melee-v1.yaml` aktualisieren und `npm run gen:api` laufen lassen.
+Die App legt sich auf **v2** fest. In v2 hängt jede Datenressource unter einer
+Turnierreihe (`/api/v2/series/{series}/…`); die Reihe steht als `SERIES` in
+`src/lib/api/client.ts` und ist hier fest `turner-tuesday`. Nur `/api/v2/meta`
+und `/api/v2/ranked-day` liegen daneben — das Ranked-Day-Fenster gilt für alle
+Reihen gleich.
+
+Zwei Dinge sind gegenüber v1 nicht bloß umbenannt: die beiden Ranglisten haben
+verschiedene Formen und deshalb je einen eigenen Pfad statt `rankings/{type}`,
+und das Power Ranking kennt keine Bereiche mehr (siehe unten). Welche Bereiche
+die Quartalswertung führt und welcher davon die Vorgabe ist, steht im Katalog
+unter `rankings` — die App liest es dort aus, statt `qualified` anzunehmen.
+
+`src/lib/api/schema.ts` ist generiert und wird nicht von Hand geändert — bei
+einer Vertragsänderung die Spec in `openapi/melee-v2.yaml` aktualisieren und
+`npm run gen:api` laufen lassen.
 
 Der Client in `src/lib/api/client.ts` bildet zwei Eigenheiten des Vertrags ab:
 den `{data, meta}`-Umschlag (Fehler sind problem+json und eben *nicht*
@@ -122,12 +134,25 @@ eingepackt) und die ETag-Validatoren — abgelegte ETags gehen als
 Die Basis-URL steht in `app.json` unter `extra.apiBaseUrl` und lässt sich beim
 Build über `API_BASE_URL` überschreiben.
 
+### Power Ranking v2
+
+Die Rangliste unter `rankings/power` rechnet in v2 anders, und der Screen zeigt
+das: sortiert wird nach `score` — der Spielstärke auf einer Skala, auf der 500
+der Durchschnitt aller gewerteten Spieler ist —, nicht mehr nach
+durchschnittlicher Platzierung. Jedes Event zählt, gewichtet danach, wie stark
+sein Feld besetzt war; eine Mindestgröße und eine Mindestzahl an Teilnahmen gibt
+es nicht mehr, und damit auch keinen Bereichsumschalter.
+
+Die Ampel auf den Karten bedeutet deshalb etwas anderes als vorher: sie zeigt
+nicht mehr verpasste Events, sondern wie stark die Felder waren, gegen die ein
+Spieler angetreten ist (`averageFieldStrength`, gleiche Skala wie `score`).
+
 ### Anmeldestand
 
 Die Anmeldezahl des nächsten Turniers ist der einzige Wert der App, der nicht
-aus `/api/v1` kommt. Er kann es nicht: `/api/v1/events` listet ausschließlich
-importierte, gespielte Events — ein Turnier taucht dort erst auf, wenn es
-Ergebnisse hat. Die laufenden Anmeldungen liegen live bei start.gg.
+aus `/api/v2` kommt. Er kann es nicht: die Event-Liste einer Reihe führt
+ausschließlich importierte, gespielte Events — ein Turnier taucht dort erst auf,
+wenn es Ergebnisse hat. Die laufenden Anmeldungen liegen live bei start.gg.
 
 `src/lib/api/upcoming.ts` holt sie deshalb dort, wo das Web-Frontend sie schon
 serverseitig zusammenträgt: ein `GET /` mit dem Header `X-Inertia: true` liefert
@@ -138,14 +163,14 @@ sich jederzeit ändern und fällt mit dem alten Web-Frontend ganz weg.
 Darauf ist die Datei ausgelegt. Der Zugriff steht isoliert in ihr und nicht im
 Client, jede unerwartete Form wird zu `null` statt zu einem Fehler, und der
 Screen steht auch ohne die Zahl. Bietet die API den Wert eines Tages selbst an —
-etwa als `/api/v1/upcoming-event` —, wird genau diese eine Datei ersetzt; der
+etwa als `upcoming-event` unter der Reihe —, wird genau diese eine Datei ersetzt; der
 Rest der App kennt nur `fetchUpcomingEvent` und den Typ darunter.
 
 ### Ranked Day
 
 `src/lib/ranked-day.ts` rechnet aus, wann Slippis Free Ranked Day läuft: alle
 vier Tage, 24 Stunden lang, verankert an einem bekannten Fenster. Den Takt
-liefert `schedule` aus `/api/v1/ranked-day`; die Konstanten im Code sind nur der
+liefert `schedule` aus `/api/v2/ranked-day`; die Konstanten im Code sind nur der
 Notnagel, damit der erste Start ohne Netz trotzdem richtig zählt.
 
 Der Countdown selbst läuft lokal. Zwei Dinge macht die App deshalb anders als
@@ -201,7 +226,7 @@ nicht gibt:
 | Screen | Route | Inhalt |
 | --- | --- | --- |
 | Turner Overview | `(tabs)/index` | Event-Auswahl mit Suche, Endplatzierungen, Ranking-Tabelle |
-| Power Ranking | `(tabs)/power-ranking` | Bereichs- und Zeitraumwechsel, Legende, Spielerkarten mit Kostüm-Overrides |
+| Power Ranking | `(tabs)/power-ranking` | Zeitraumwechsel, Legende, Spielerkarten mit Kostüm-Overrides |
 | Event-Detail | `(tabs)/events/[eventId]` | Turnierverlauf nach Bracket-Runden, Charakterwahl, Endplatzierungen |
 | Spieler-Detail | `(tabs)/players/[playerId]` | Platzierungsverlauf, Events, Charaktere, H2H |
 | Einstellungen | `(tabs)/settings` | Darstellung (Hell/Dunkel/System), Ranked-Day-Erinnerung, Datenstand |
@@ -212,7 +237,7 @@ bleibt die Navbar auf jeder Unterseite ebenfalls sichtbar.
 
 ### Benachrichtigungen
 
-Es gibt nichts zu pushen: `/api/v1` liefert Daten und kennt keine Geräte. Der
+Es gibt nichts zu pushen: `/api/v2` liefert Daten und kennt keine Geräte. Der
 Takt des Ranked Day steht aber fest, also plant `src/lib/notifications.tsx` die
 Nachrichten selbst — lokal, und damit auch zugestellt, wenn die App nicht läuft.
 Weil niemand von außen nachlegt, werden sechs Fenster auf einmal eingestellt und
@@ -228,7 +253,7 @@ das Modul nicht.
 
 `src/lib/bracket.ts` ist der TypeScript-Port von
 `reference/EventDetailBuilder.php` (329 Zeilen PHP). Die API liefert unter
-`/api/v1/events/{id}` ein flaches `sets[]`; die Runden, ihre Reihenfolge vom
+`/api/v2/series/{series}/events/{id}` ein flaches `sets[]`; die Runden, ihre Reihenfolge vom
 Grand Final hinunter zu den Pools und die Paarung von Winners- und
 Losers-Runden desselben Schritts entstehen erst hier.
 
@@ -243,3 +268,8 @@ Offen:
 
 - **Push** — das Web nutzt Web-Push (VAPID); nativ braucht es FCM/APNs. Auf iOS
   erst mit einem bezahlten Apple-Developer-Account möglich.
+- **Turniersiege und Eventgewichte** — v2 liefert beides (`tournamentWins` je
+  Zeile, `events[]` je Abschnitt), die Karten zeigen es noch nicht. Im Web sind
+  das die Krone und die Tabelle „Eventgewichte".
+- **Weitere Reihen** — v2 könnte über `/api/v2/series` mehrere anbieten; die App
+  bleibt bei `turner-tuesday`.

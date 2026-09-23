@@ -1,8 +1,8 @@
 /**
  * Der Anmeldestand des nächsten Turner Tuesday.
  *
- * **Diese Zahl steht nicht in der v1-API.** `/api/v1/events` listet nur
- * importierte, bereits gespielte Events; ein Turnier taucht dort erst auf,
+ * **Diese Zahl steht in keiner API-Version.** Die Event-Liste einer Reihe führt
+ * nur importierte, bereits gespielte Events; ein Turnier taucht dort erst auf,
  * wenn es Ergebnisse hat. Die laufenden Anmeldungen liegen live bei start.gg
  * und werden serverseitig vom Web-Frontend geholt (UpcomingEventProvider).
  *
@@ -10,7 +10,7 @@
  * `X-Inertia: true` liefert statt der HTML-Seite deren Props als JSON, darin
  * `upcomingEvent` in der Form, die reference/Home.vue beschreibt.
  *
- * Das ist **kein zugesicherter Vertrag** — anders als /api/v1 darf sich das
+ * Das ist **kein zugesicherter Vertrag** — anders als /api/v2 darf sich das
  * jederzeit ändern, und mit der Abschaltung des alten Web-Frontends fällt es
  * ganz weg. Daraus folgt, wie diese Datei gebaut ist:
  *

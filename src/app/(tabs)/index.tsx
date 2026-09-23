@@ -6,7 +6,7 @@
  * Web zweispaltig nebeneinander stellt, steht hier untereinander.
  *
  * Der Anmeldestand „x/y" am Aufruf-Button ist der einzige Wert dieses Screens,
- * der nicht aus /api/v1 kommt: die Zahl liegt live bei start.gg. Woher die App
+ * der nicht aus /api/v2 kommt: die Zahl liegt live bei start.gg. Woher die App
  * sie stattdessen holt und was das kostet, steht in lib/api/upcoming.ts.
  */
 import { useMemo, useState } from "react";
@@ -14,8 +14,8 @@ import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 
 import { router } from "expo-router";
 
-import { useEvent, useEvents, useRanking, useScopeOptions } from "@/lib/api/queries";
-import type { RankingScope, RankingSection } from "@/lib/api/types";
+import { useEvent, useEvents, useQuarterlyRanking, useScopes } from "@/lib/api/queries";
+import type { QuarterlyRankingSection, RankingScope } from "@/lib/api/types";
 import { Screen } from "@/components/screen";
 import { StartGgLogo } from "@/components/startgg-logo";
 import { Badge } from "@/components/ui/badge";
@@ -148,14 +148,18 @@ function EventPicker() {
 }
 
 function RankingCard() {
-  const [scope, setScope] = useState<RankingScope>("qualified");
+  // Ohne eigene Wahl entscheidet der Katalog — eine Reihe ohne
+  // „6+ Teilnehmer"-Tabelle kennt `qualified` gar nicht.
+  const [scope, setScope] = useState<RankingScope>();
   const [periodKey, setPeriodKey] = useState("overall");
   const [page, setPage] = useState(1);
 
-  const { data, isPending, error, refetch } = useRanking("quarterly", scope);
-  const scopeOptions = useScopeOptions("quarterly");
+  const { options: scopeOptions, defaultScope } = useScopes("quarterly");
+  // Ohne `scope` antwortet die API mit ihrer eigenen Vorgabe — das ist genau
+  // `defaultScope`, das hier deshalb nur den Umschalter beschriftet.
+  const { data, isPending, error, refetch } = useQuarterlyRanking(scope);
 
-  const periods = useMemo<(RankingSection & { key: string; label: string })[]>(() => {
+  const periods = useMemo<(QuarterlyRankingSection & { key: string; label: string })[]>(() => {
     if (!data) return [];
 
     return [
@@ -193,7 +197,7 @@ function RankingCard() {
 
         <Segmented
           options={scopeOptions}
-          value={scope}
+          value={scope ?? defaultScope ?? ""}
           onChange={(key) => {
             setScope(key as RankingScope);
             setPage(1);
