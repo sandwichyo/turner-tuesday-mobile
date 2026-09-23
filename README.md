@@ -229,11 +229,22 @@ Rahmen darin ist der klassische Doppelrand.
 | `assets/images/favicon.png` | derselbe | 48² |
 | `assets/images/android-icon-foreground.png` | 140–884, auf 470 px in der Mitte | 512² |
 | `assets/images/android-icon-background.png` | einfarbig `#112540` | 512² |
+| `assets/images/splash-icon.png` | 192–832, Ecken gerundet, transparent | 512² |
 
 Der Vordergrund ist der weitere Ausschnitt, weil Android nur die mittleren
 66,7 % zeigt: der Ring muss vollständig in diese Zone passen, der Rest ist
 Anschnitt. `#112540` ist der Randton des Sternenhimmels, damit die Fläche
 hinter dem Anschnitt nicht abreißt.
+
+Der **Splash-Screen** zeigt dasselbe Motiv: `assets/images/splash-icon.png` ist
+derselbe Ausschnitt, nur mit abgerundeten Ecken auf durchsichtigem Grund, 160
+Punkte breit. Der Grund dahinter ist nicht die Icon-Farbe, sondern `base-200`
+der App — `#F2F2F2` hell, `#191E24` dunkel —, damit der Übergang vom Splash in
+den ersten Screen nicht springt. Beide Werte stehen so in `src/lib/theme.tsx`.
+
+**Nach einer Änderung an Bild oder Farben muss `npm run prebuild` laufen**,
+sonst steht im Ordner `ios/` weiter das alte Asset; `npm run ios` zieht es
+ebenfalls nach.
 
 Kein `monochromeImage`: ein Schwellwert über die Vorlage macht aus Sternen und
 Nordlicht Rauschen statt einer Silhouette, und der untere Teil des Rings ist zu
